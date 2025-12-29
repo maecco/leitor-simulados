@@ -9,6 +9,8 @@ from core.definitions.geometry import IntBoundingBox, IntPoint
 
 from api.data_structs import ImageCacheStruct
 
+from utils.memory import MemoryTracker, MemoryCategory
+
 from .. import Config, title_font, semititle_font
 from ..event_system import EventBus, Calltime
 
@@ -123,6 +125,12 @@ class ImgCanvas(tk.Canvas):
         event : optional
             The event that triggered the display update (default is None).
         """
+        # Track deallocation of previous display images
+        if hasattr(self, 'display_image_cv') and self.display_image_cv is not None:
+            MemoryTracker.track_deallocation(self.display_image_cv)
+        if hasattr(self, 'photo_image') and self.photo_image is not None:
+            MemoryTracker.track_deallocation(self.photo_image)
+        
         # Retrieve image and its dimensions
         image = Config.api.image
         height, width, _ = image.raw.shape
@@ -135,9 +143,24 @@ class ImgCanvas(tk.Canvas):
             (new_width, new_height),
             interpolation=cv2.INTER_LINEAR
         )
+        # Track the resized image allocation
+        MemoryTracker.track_allocation(
+            self.display_image_cv,
+            MemoryCategory.GUI_DISPLAY,
+            source="ImgCanvas.display_image",
+            description=f"Resized display ({new_width}x{new_height})"
+        )
+        
         # Convert to a PIL image then to a PhotoImage for Tkinter
         display_image_pil = Image.fromarray(self.display_image_cv)
         self.photo_image = ImageTk.PhotoImage(display_image_pil)
+        # Track the PhotoImage allocation
+        MemoryTracker.track_allocation(
+            self.photo_image,
+            MemoryCategory.GUI_PHOTOIMAGE,
+            source="ImgCanvas.display_image",
+            description=f"PhotoImage ({new_width}x{new_height})"
+        )
 
         # Clear the canvas and draw the image
         self.delete("all")

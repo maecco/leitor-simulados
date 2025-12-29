@@ -4,6 +4,9 @@ if TYPE_CHECKING:
     from .label_map import LabelMap
 
 import math
+import threading
+import warnings
+from contextlib import contextmanager
 from enum import Enum
 from utils.memory import cache_readonly_property    
 
@@ -34,8 +37,12 @@ class Detection:
     class of detection.
 
     Class Attributes:
-        - __label_map: A map tha is used to define the type of the detection based
-        on an integer returned by the model. This map is set by the method set_label_map
+        - __label_map: The current label map used for new detections. Thread-safe via lock.
+        
+    Note:
+        The label_map is stored per-instance after creation to prevent issues when
+        the global label_map changes during processing. Use the `label_map_context`
+        context manager for safe label map switching.
     """
 
     class Type(Enum):
@@ -52,39 +59,108 @@ class Detection:
         QUESTION_NUMBER = 6
         QUESTION_COLUMN = 7
 
-    __label_map : LabelMap = None
+    __label_map: LabelMap | None = None
+    __label_map_lock = threading.Lock()
 
     def __init__(
             self,
-            bounding_box : FloatBoundingBox,
-            model_assing_id : int,
-            score : float,
-            img_width : int,
-            img_height : int,
-            anchored_at : IntPoint | None = None
+            bounding_box: FloatBoundingBox,
+            model_assing_id: int,
+            score: float,
+            img_width: int,
+            img_height: int,
+            anchored_at: IntPoint | None = None,
+            label_map: LabelMap | None = None
         ) -> None:
-        # Check if label map is set
-        if Detection.__label_map is None:
-            raise Exception("Label map not set")
+        """
+        Initialize a Detection instance.
+        
+        Parameters
+        ----------
+        bounding_box : FloatBoundingBox
+            The bounding box of the detection.
+        model_assing_id : int
+            The class ID assigned by the model.
+        score : float
+            The confidence score of the detection.
+        img_width : int
+            The width of the source image.
+        img_height : int
+            The height of the source image.
+        anchored_at : IntPoint | None, optional
+            The anchor point if detection is from a cropped image.
+        label_map : LabelMap | None, optional
+            The label map to use. If None, uses the current class-level label map.
+        """
+        # Use provided label_map or fall back to class-level one
+        effective_label_map = label_map or Detection.__label_map
+        
+        if effective_label_map is None:
+            raise ValueError(
+                "Label map not set. Either pass label_map parameter or call "
+                "Detection.set_label_map() before creating detections."
+            )
+        
+        # Store the label_map reference on the instance (immutable after creation)
+        self._label_map: LabelMap = effective_label_map
+        
         # Variables
-        self.bounding_box : FloatBoundingBox = bounding_box
-        self.model_assing_id : int = model_assing_id
-        self.score : float = float(score)
-        self.img_width : int =  img_width
-        self.img_height : int = img_height
-        self.class_type : Detection.Type = self.__label_map.detections[model_assing_id]
+        self.bounding_box: FloatBoundingBox = bounding_box
+        self.model_assing_id: int = model_assing_id
+        self.score: float = float(score)
+        self.img_width: int = img_width
+        self.img_height: int = img_height
+        self.class_type: Detection.Type = self._label_map.detections[model_assing_id]
+        
         # Lazy initialized by the CoreImage class
-        self.anchored_at : IntPoint | None = anchored_at
-        self.global_pixel_bounding_box : IntBoundingBox = None
+        self.anchored_at: IntPoint | None = anchored_at
+        self.global_pixel_bounding_box: IntBoundingBox | None = None
         
 
     # Public Setters && getters
     @classmethod
-    def set_label_map(cls, label_map : LabelMap) -> None:
-        cls.__label_map = label_map
+    def set_label_map(cls, label_map: LabelMap) -> None:
+        """
+        Set the class-level label map used for new Detection instances.
+        
+        Note: This is thread-safe but affects all new detections globally.
+        Consider using `label_map_context` for safer scoped usage.
+        """
+        with cls.__label_map_lock:
+            cls.__label_map = label_map
+    
     @classmethod
-    def get_label_map(cls) -> LabelMap:
-        return cls.__label_map
+    def get_label_map(cls) -> LabelMap | None:
+        """Get the current class-level label map."""
+        with cls.__label_map_lock:
+            return cls.__label_map
+    
+    @classmethod
+    @contextmanager
+    def label_map_context(cls, label_map: LabelMap):
+        """
+        Context manager for temporarily setting the label map.
+        
+        This is the recommended way to switch label maps during processing,
+        as it ensures the previous label map is restored even if an exception occurs.
+        
+        Usage:
+            with Detection.label_map_context(first_stage_label_map):
+                # Create first stage detections here
+                detections = model.detect(image)
+            
+            with Detection.label_map_context(second_stage_label_map):
+                # Create second stage detections here
+                detections = model.detect(cropped_image)
+        """
+        with cls.__label_map_lock:
+            old_label_map = cls.__label_map
+            cls.__label_map = label_map
+        try:
+            yield
+        finally:
+            with cls.__label_map_lock:
+                cls.__label_map = old_label_map
 
     # Properties
     @cache_readonly_property

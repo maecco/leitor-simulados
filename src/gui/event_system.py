@@ -1,4 +1,5 @@
 import inspect
+import threading
 from enum import Enum
 from collections import defaultdict
 
@@ -88,7 +89,7 @@ class FunctionRegistry:
 
 class EventBus:
     """
-    A event bus that allows subscribing to and publishing events.
+    A thread-safe event bus that allows subscribing to and publishing events.
     
     Attributes
     ----------
@@ -96,9 +97,12 @@ class EventBus:
         A registry for storing function references.
     _subscribers : defaultdict
         A dictionary mapping event names to lists of (method_name, calltime) tuples.
+    _lock : threading.Lock
+        Lock for thread-safe access to subscribers.
     """
     registry = FunctionRegistry()
     _subscribers = defaultdict(list)
+    _lock = threading.Lock()
     
     @classmethod
     def bind(cls, target_cls):
@@ -162,8 +166,9 @@ class EventBus:
         """
         def decorator(func):
             fullname = func.__qualname__
-            for event_name in event_names:
-                cls._subscribers[event_name].append((fullname, calltime))
+            with cls._lock:
+                for event_name in event_names:
+                    cls._subscribers[event_name].append((fullname, calltime))
             return func
         return decorator
 
@@ -181,10 +186,11 @@ class EventBus:
         **kwargs : dict
             Keyword arguments to pass to the subscribed methods.
         """
-        sorted_subscribers = sorted(
-            cls._subscribers.get(event_name, []),
-            key=lambda x: x[1].value  # Sort by Calltime value (EARLY, DEFAULT, LATE)
-        )
+        with cls._lock:
+            sorted_subscribers = sorted(
+                cls._subscribers.get(event_name, []),
+                key=lambda x: x[1].value  # Sort by Calltime value (EARLY, DEFAULT, LATE)
+            )
         for fullname, _ in sorted_subscribers:
             bound_method = cls.registry.get_bound_method(fullname)
             bound_method(event_name, *args, **kwargs)

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Generator, Optional
+from typing import Generator
 from pathlib import Path
 
 import numpy as np
@@ -18,6 +18,7 @@ from core.IO.export.export_yolo import DetectionsExportData, YOLOExporter
 from core.builder import Builder
 
 from utils.log import LoggingSystem
+from utils.memory import MemoryTracker, MemoryCategory
 
 from .data_structs import ImageCacheStruct, ModelInfo
 from .caching import Cache
@@ -36,23 +37,23 @@ class CoreApi:
         Initializes the CoreApi with default values and helper components.
         """
         # CoreImage
-        self.__image: Optional[CoreImage] = None
-        self.__rgb_image_raw: Optional[np.ndarray] = None
+        self.__image: CoreImage | None = None
+        self.__rgb_image_raw: np.ndarray | None = None
 
         # Helpers
         self.__cache: Cache = Cache(0)
 
         # Context Variables
-        self.__image_files: Optional[list[str]] = None
-        self.__number_of_images: Optional[int] = None
-        self.__fs_model: Optional[DetectionModel] = None
-        self.__ss_model: Optional[DetectionModel] = None
-        self.__current_set_index: Optional[int] = None
-        self.__current_test_type: Optional[TestType] = None
+        self.__image_files: list[str] | None = None
+        self.__number_of_images: int | None = None
+        self.__fs_model: DetectionModel | None = None
+        self.__ss_model: DetectionModel | None = None
+        self.__current_set_index: int | None = None
+        self.__current_test_type: TestType | None = None
         
         # Internal only
-        self.__fs_model_info : ModelInfo = None
-        self.__ss_model_info : ModelInfo = None
+        self.__fs_model_info: ModelInfo | None = None
+        self.__ss_model_info: ModelInfo | None = None
 
 
 # =============================================================================
@@ -61,14 +62,14 @@ class CoreApi:
 
 
     @property
-    def image(self) -> Optional[CoreImage]:
+    def image(self) -> CoreImage | None:
         """
         Get the currently loaded CoreImage instance.
         This property is set by the  select_image  method.
 
         Returns
         -------
-        Optional[CoreImage]
+        CoreImage | None
             The current CoreImage instance, if available.
         """
         return self.__image
@@ -93,7 +94,7 @@ class CoreApi:
         self.__image = image
 
     @property
-    def rgb_image_raw(self) -> Optional[np.ndarray]:
+    def rgb_image_raw(self) -> np.ndarray | None:
         """
         A NumPy array using RGB color pattenr as is used in the pillow lib.
         Used on computations on the image itself.
@@ -101,7 +102,7 @@ class CoreApi:
 
         Returns
         -------
-        Optional[np.ndarray]
+        np.ndarray | None
             The raw RGB image data, if available.
         """
         return self.__rgb_image_raw
@@ -141,7 +142,7 @@ class CoreApi:
 
 
     @property
-    def image_files(self) -> Optional[list[str]]:
+    def image_files(self) -> list[str | None]:
         """
         Get the list of image file paths found on the provided folder.
         
@@ -149,13 +150,13 @@ class CoreApi:
 
         Returns
         -------
-        Optional[list[str]]
+        list[str | None]
             The list of image file paths, if available.
         """
         return self.__image_files
 
     @property
-    def number_of_images(self) -> Optional[int]:
+    def number_of_images(self) -> int | None:
         """
         Get the total number of image paths.
         
@@ -163,13 +164,13 @@ class CoreApi:
 
         Returns
         -------
-        Optional[int]
+        int | None
             The total number of images, if available.
         """
         return self.__number_of_images
     
     @property
-    def fs_model(self) -> Optional[DetectionModel]:
+    def fs_model(self) -> DetectionModel | None:
         """
         Returns the detection model selected for the first stage detection.
         
@@ -177,13 +178,13 @@ class CoreApi:
 
         Returns
         -------
-        Optional[DetectionModel]
+        DetectionModel | None
             The full-scale detection model, if available.
         """
         return self.__fs_model
 
     @property
-    def ss_model(self) -> Optional[DetectionModel]:
+    def ss_model(self) -> DetectionModel | None:
         """
         Returns the detection model selected for the second stage detection.
         
@@ -191,13 +192,13 @@ class CoreApi:
 
         Returns
         -------
-        Optional[DetectionModel]
+        DetectionModel | None
             The small-scale detection model, if available.
         """
         return self.__ss_model
 
     @property
-    def current_set_index(self) -> Optional[int]:
+    def current_set_index(self) -> int | None:
         """
         Get the current set index. The index is position of the image path
         on the list of image files -> image_files.
@@ -206,13 +207,13 @@ class CoreApi:
 
         Returns
         -------
-        Optional[int]
+        int | None
             The current set index.
         """
         return self.__current_set_index
 
     @property
-    def current_test_type(self) -> Optional[TestType]:
+    def current_test_type(self) -> TestType | None:
         """
         Get the current test type.
         
@@ -222,7 +223,7 @@ class CoreApi:
 
         Returns
         -------
-        Optional[TestType]
+        TestType | None
             The current test type.
         """
         return self.__current_test_type
@@ -290,8 +291,18 @@ class CoreApi:
             img = CoreImage.from_path(self.image_files[index])
             if self.image:
                 self.image.free()  # Clear the previous image
+            # Track deallocation of previous rgb_image_raw
+            if self.__rgb_image_raw is not None:
+                MemoryTracker.track_deallocation(self.__rgb_image_raw)
             self.image = img
             self.rgb_image_raw = cv2.cvtColor(img.raw, cv2.COLOR_BGR2RGB)
+            # Track allocation of new rgb_image_raw
+            MemoryTracker.track_allocation(
+                self.__rgb_image_raw,
+                MemoryCategory.CORE_IMAGE,
+                source="CoreApi.select_image",
+                description=f"RGB conversion of {img.name}"
+            )
             self.__current_set_index = index
         except Exception as e:
             logger.exception(f"Failed to load image at index {index}: {e}")
@@ -364,7 +375,7 @@ class CoreApi:
             logger.info(f'"{model_info.name}" loaded for stage {stage.name}')
         return True
 
-    def get_report(self, index: int = -1) -> Optional[TestReport]:
+    def get_report(self, index: int = -1) -> TestReport | None:
         """
         Get the report for the selected image.
 
@@ -375,12 +386,12 @@ class CoreApi:
 
         Returns
         -------
-        Optional[TestReport]
+        TestReport | None
             The report for the selected image, if available.
         """
         if index == -1:
             index = self.current_set_index
-        img_cache: Optional[ImageCacheStruct] = self.cache.from_index(index)
+        img_cache: ImageCacheStruct | None = self.cache.from_index(index)
         if img_cache is None:
             return None
         return img_cache.report
@@ -443,7 +454,7 @@ class CoreApi:
             index = self.current_set_index
 
         # Retrieve cached data
-        img_cache: Optional[ImageCacheStruct] = self.cache.from_index(index)
+        img_cache: ImageCacheStruct | None = self.cache.from_index(index)
         if img_cache is None:
             raise ValueError("No cache data found for the current image")
         
@@ -499,7 +510,7 @@ class CoreApi:
         ValueError
             If the models are not correctly loaded.
         """
-        # Check if enought models are loaded
+        # Check if enough models are loaded
         if not self.__fs_model \
            or ( 
                 not self.__ss_model 
@@ -508,25 +519,44 @@ class CoreApi:
             raise ValueError("Bad models setup")
                 
         # Run the detection pipeline
-        Detection.set_label_map(self.fs_model.label_map)
-        self.image.make_detections_with_model(
-            self.__fs_model, fs_score_threshold
+        self._run_detection_on_image(
+            self.image, fs_score_threshold, ss_score_threshold
         )
-        self.image.make_cropped()
-        Detection.set_label_map(self.ss_model.label_map)
-        for crop in self.image.crops:
-            crop.make_detections_with_model(
-                self.__ss_model, ss_score_threshold
-            )
 
         # Cache the detections
         self.cache.cache_image(self.current_set_index, self.image)
+    
+    def _run_detection_on_image(
+            self,
+            image: CoreImage,
+            fs_score_threshold: float,
+            ss_score_threshold: float
+        ) -> None:
+        """
+        Internal method to run detection pipeline on a single image.
+        
+        Uses context managers to safely switch label maps between stages.
+        """
+        # First stage detection
+        with Detection.label_map_context(self.fs_model.label_map):
+            image.make_detections_with_model(
+                self.__fs_model, fs_score_threshold
+            )
+        
+        image.make_cropped()
+        
+        # Second stage detection on crops
+        with Detection.label_map_context(self.ss_model.label_map):
+            for crop in image.crops:
+                crop.make_detections_with_model(
+                    self.__ss_model, ss_score_threshold
+                )
 
     def run_detection_pipeline_for_all(
             self,
             fs_score_threshold: float,
             ss_score_threshold: float,
-            progress_queue: Optional[ProgressTracker] = None
+            progress_queue: ProgressTracker | None = None
         ):
         """
         Runs the detection pipeline for all images in the current set.
@@ -537,7 +567,7 @@ class CoreApi:
             Parameters for the full-scale detection model.
         ss_params : DetectionParameters
             Parameters for the small-scale detection model.
-        progress_queue : Optional[ProgressTracker], optional
+        progress_queue : ProgressTracker | None, optional
             A progress tracker to monitor the pipeline, by default None.
 
         Raises
@@ -569,16 +599,10 @@ class CoreApi:
         for i in range(self.number_of_images):
             # Select the image
             self.select_image(i)
-            # Run the detection pipeline
-            Detection.set_label_map(self.fs_model.label_map)
-            self.image.make_detections_with_model(
-                self.__fs_model, fs_score_threshold
-            )
-            self.image.make_cropped()
-            Detection.set_label_map(self.ss_model.label_map)
-            for crop in self.image.crops:
-                crop.make_detections_with_model(
-                    self.__ss_model, ss_score_threshold
+            
+            # Run the detection pipeline using shared method
+            self._run_detection_on_image(
+                self.image, fs_score_threshold, ss_score_threshold
             )
 
             # Cache the detections
@@ -589,7 +613,7 @@ class CoreApi:
                 progress_queue.increment()
             
             # Check if the progress tracker is still running
-            if not progress_queue.running():
+            if progress_queue and not progress_queue.running():
                 break
         self.select_image(0)
         return True
@@ -679,7 +703,7 @@ class CoreApi:
                 formatted_data.names.append(img_cache.img_name)
                 formatted_data.test_blocks.append(img_cache.blocks)
         
-        imgs: Optional[Generator[CoreImage, None, None]] = (
+        imgs: Generator[CoreImage, None, None | None] = (
         CoreImage.from_paths(self.image_files, lazy=True) if save_images else None
         )
         exporter = YOLOExporter()

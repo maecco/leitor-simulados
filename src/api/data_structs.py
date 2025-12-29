@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Optional
 from pathlib import Path
 
 from core.definitions.blocks import TestBlocks
@@ -21,16 +22,16 @@ class ImageCacheStruct:
         The name of the image.
     container : DetectionContainer
         A container that holds detected objects or regions within the image.
-    blocks : Optional[TestBlocks], default=None
+    blocks : TestBlocks | None, default=None
         The first-stage detection results, along with second-stage detections inside it.
-    questions : Optional[TestReport], default=None
+    report : TestReport | None, default=None
         The extracted questions, answers, and CPF (identification number) of the image owner.
     """
 
     img_name: str
     container: DetectionContainer
-    blocks: Optional[TestBlocks] = None
-    report: Optional[TestReport] = None
+    blocks: TestBlocks | None = None
+    report: TestReport | None = None
 
     def has_detections(self) -> bool:
         """
@@ -43,9 +44,6 @@ class ImageCacheStruct:
         """
         return not self.container.empty()
 
-
-from pathlib import Path
-from typing import Optional
 
 class ModelInfo:
     """

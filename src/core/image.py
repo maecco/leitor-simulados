@@ -2,6 +2,7 @@
 from __future__ import annotations
 from typing import Generator
 from pathlib import Path
+from functools import wraps
 
 import cv2
 import numpy as np
@@ -9,6 +10,8 @@ import numpy as np
 from core.definitions.blocks import TestBlocks, Block
 from core.definitions.geometry import IntPoint
 from core.detection import Detection, DetectionContainer
+
+from utils.memory import MemoryTracker, MemoryCategory
 
 
 
@@ -33,37 +36,49 @@ class CoreImage():
     @classmethod
     def from_paths(
             cls,
-            paths : list[str],
-            lazy = True
-        ) -> Generator[CoreImage, None, None]:
+            paths: list[str],
+            lazy: bool = True
+        ) -> Generator[CoreImage, None, None] | list[CoreImage]:
         """
-        Constructor that creates a generator of CoreImage objects from
-        a list of file paths.
+        Constructor that creates CoreImage objects from a list of file paths.
 
         Parameters:
         - paths : list[str]
             A list of file paths.
-        - lazy : Bool
-            A flag that indicates if the images should be loaded lazily.
+        - lazy : bool
+            If True, returns a generator (lazy loading).
+            If False, returns a list (eager loading).
+        
+        Returns:
+        - Generator[CoreImage] if lazy=True
+        - list[CoreImage] if lazy=False
         """
-        if lazy:
-            for path in paths:
-                name : str = path.split("/")[-1]
-                raw : np.ndarray = cv2.imread(path)
-                detections : list[Detection] | None = None
-                yield cls(name, raw, detections)
-        else:
+        if not lazy:
             return [cls.from_path(path) for path in paths]
+        
+        def _lazy_generator():
+            for path in paths:
+                yield cls.from_path(path)
+        
+        return _lazy_generator()
 
     @classmethod
-    def from_path(cls, path : str):
+    def from_path(cls, path: str) -> CoreImage:
         """
-        Constructor that creates an CoreImage object from a file path.
+        Constructor that creates a CoreImage object from a file path.
+        
+        Parameters:
+        - path : str
+            The file path to the image.
+        
+        Returns:
+        - CoreImage: The loaded image object.
         """
-        name : str = path.split("/")[-1]
-        raw : np.ndarray = cv2.imread(path)
-        detections : list[Detection] | None = None
-        return cls(name, raw, detections)
+        path_obj = Path(path)
+        name: str = path_obj.name
+        raw: np.ndarray = cv2.imread(str(path_obj))
+        detections: list[Detection] | None = None
+        return cls(name, raw, detections, _source_path=path)
     
 
     colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (0,255,255), (255,0,255), (0,0,0)]
@@ -76,7 +91,8 @@ class CoreImage():
             cropped_from = None,
             cropped_from_detection=None,
             anchored_at : IntPoint | None = None,
-            order : int = -1
+            order : int = -1,
+            _source_path : str = None
             ) -> None:
         self.raw : np.ndarray = raw
         self.name : str = name
@@ -89,16 +105,28 @@ class CoreImage():
         self.cropped_from_detection : Detection = cropped_from_detection
         self.anchored_at : IntPoint = anchored_at
         self.order : int = order
+        
+        # Track memory allocation
+        category = MemoryCategory.CORE_IMAGE_CROP if cropped_from else MemoryCategory.CORE_IMAGE
+        source = _source_path or f"crop_from:{cropped_from.name if cropped_from else 'unknown'}"
+        MemoryTracker.track_allocation(
+            self.raw, 
+            category, 
+            source=f"CoreImage.__init__",
+            description=f"{name} ({self.width}x{self.height})"
+        )
 
     
     ## Aux decoration functions ##
 
+    @staticmethod
     def _has_detections(func):
+        """Decorator that ensures detections are set before calling the method."""
+        @wraps(func)
         def wrapper(self, *args, **kwargs):
             if self.detections is None:
-                raise Exception("CoreImage detections not set")
-            else:
-                return func(self, *args, **kwargs)
+                raise ValueError("CoreImage detections not set")
+            return func(self, *args, **kwargs)
         return wrapper
     
 
@@ -127,7 +155,13 @@ class CoreImage():
         self.BOUNDING_BOXES_DRAWN = False
     
     @_has_detections
-    def make_cropped(self) -> list[CoreImage]:
+    def make_cropped(self) -> bool:
+        """
+        Creates cropped sub-images from detections.
+        
+        Returns:
+            bool: True if crops were created successfully, False if no detections.
+        """
         if not self.detections:
             return False
         cropped = []
@@ -201,7 +235,7 @@ class CoreImage():
             questions_blocks = questions_blocks
         )
     
-    ## Import fucntion ##
+    ## Import function ##
 
     def import_blocks(self, blocks : TestBlocks | Block) -> None:
         
@@ -256,6 +290,10 @@ class CoreImage():
         """
         for crop in self.crops:
             crop.free()
+        
+        # Track deallocation before clearing
+        if self.raw is not None:
+            MemoryTracker.track_deallocation(self.raw)
         
         self.raw = None
         self.detections = None

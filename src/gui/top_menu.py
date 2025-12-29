@@ -2,7 +2,9 @@ import tkinter as tk
 from tkinter import Menu, filedialog
 
 from .event_system import EventBus
-from .popups import SaveAsPopup, ExportYoloPopup
+from .popups import SaveAsPopup, ExportYoloPopup, MemoryTrackerPopup
+
+from utils.memory import MemoryTracker
 
 class TopMenu(tk.Menu):
     """Represents the top menu bar in the GUI.
@@ -49,6 +51,35 @@ class TopMenu(tk.Menu):
         )
         self.add_cascade(label="Exportar", menu=menu_deteccoes)
 
+        # Menu Debug / Memory
+        menu_debug = Menu(self, tearoff=0)
+        self._memory_tracking_var = tk.BooleanVar(value=False)
+        self._print_tracking_var = tk.BooleanVar(value=False)
+        menu_debug.add_checkbutton(
+            label="Enable Memory Tracking",
+            variable=self._memory_tracking_var,
+            command=self._toggle_memory_tracking
+        )
+        menu_debug.add_checkbutton(
+            label="Print on Track",
+            variable=self._print_tracking_var,
+            command=self._toggle_print_tracking
+        )
+        menu_debug.add_separator()
+        menu_debug.add_command(
+            label="Show Memory Report",
+            command=self._show_memory_report
+        )
+        menu_debug.add_command(
+            label="Print Memory Report (Console)",
+            command=self._print_memory_report
+        )
+        menu_debug.add_command(
+            label="Reset Memory Tracking",
+            command=self._reset_memory_tracking
+        )
+        self.add_cascade(label="Debug", menu=menu_debug)
+
     def open_folder(self):
         """Opens a folder selection dialog and publishes the selected folder path."""
         file = filedialog.askdirectory()
@@ -67,5 +98,30 @@ class TopMenu(tk.Menu):
         out_path = filedialog.askdirectory()
         if out_path:
             EventBus.publish("<<export_report_images>>", out_path)
+
+    def _toggle_memory_tracking(self):
+        """Toggle memory tracking on/off."""
+        if self._memory_tracking_var.get():
+            MemoryTracker.enable(print_on_track=self._print_tracking_var.get())
+        else:
+            MemoryTracker.disable()
+    
+    def _toggle_print_tracking(self):
+        """Toggle print-on-track setting."""
+        if MemoryTracker.is_enabled():
+            tracker = MemoryTracker.get_instance()
+            tracker._print_on_track = self._print_tracking_var.get()
+    
+    def _show_memory_report(self):
+        """Show memory report in a popup window."""
+        MemoryTrackerPopup(self.root)
+    
+    def _print_memory_report(self):
+        """Print memory report to console."""
+        MemoryTracker.print_report(detailed=True)
+    
+    def _reset_memory_tracking(self):
+        """Reset all memory tracking data."""
+        MemoryTracker.reset()
         
         

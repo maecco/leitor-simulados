@@ -56,7 +56,7 @@ class LoggingSystem:
     
 
     @classmethod
-    def initilize(cls, log_level):
+    def initialize(cls, log_level):
 
         # Sync tools
         cls._lock = threading.Lock()
@@ -188,8 +188,6 @@ class LoggingSystem:
                     continue
                     
                 original_method = attr_value
-                if target_cls.__name__ == "Detection":
-                    print(f"Processing method {attr_name}")
                 
                 # Create a closure that captures the correct method and name
                 def make_wrapper(method_name, method):

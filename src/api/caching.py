@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from core.image import CoreImage
 from core.definitions.blocks import TestBlocks
 from core.detection import DetectionContainer
 from api.data_structs import ImageCacheStruct
-from typing import List, Optional
+
 
 class Cache:
     """
@@ -10,7 +12,7 @@ class Cache:
 
     Attributes
     ----------
-    __data : List[Optional[ImageCacheStruct]]
+    __data : list[ImageCacheStruct | None]
         A list storing cached image data or None if not yet cached.
     """
 
@@ -23,7 +25,7 @@ class Cache:
         number_of_images : int
             The number of images to be cached.
         """
-        self.__data: List[Optional[ImageCacheStruct]] = [None] * number_of_images
+        self.__data: list[ImageCacheStruct | None] = [None] * number_of_images
 
     def cache_image(self, index: int, image: CoreImage):
         """
@@ -56,7 +58,7 @@ class Cache:
             report=None,
         )
 
-    def from_index(self, index: int) -> Optional[ImageCacheStruct]:
+    def from_index(self, index: int) -> ImageCacheStruct | None:
         """
         Retrieves the cached data at the given index.
 
@@ -67,18 +69,18 @@ class Cache:
 
         Returns
         -------
-        Optional[ImageCacheStruct]
+        ImageCacheStruct | None
             The cached image data if available, otherwise None.
         """
         return self.__data[index]
 
-    def get_all(self) -> List[Optional[ImageCacheStruct]]:
+    def get_all(self) -> list[ImageCacheStruct | None]:
         """
         Retrieves all cached image data.
 
         Returns
         -------
-        List[Optional[ImageCacheStruct]]
+        list[ImageCacheStruct | None]
             A list of all cached image data, where each entry may be None if not yet cached.
         """
         return self.__data
