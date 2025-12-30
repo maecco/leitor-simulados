@@ -36,3 +36,12 @@ class Config:
     # TODO: This variable is duplicated in the API, consider removing it
     selected_test_type: TestType = TestType.PS_ALUNOS
     current_image_index: int = 0
+
+
+__all__ = [
+    "TestType",
+    "Config",
+    "title_font",
+    "semititle_font",
+    "regular_font",
+]

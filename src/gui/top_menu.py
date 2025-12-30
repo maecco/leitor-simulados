@@ -26,30 +26,30 @@ class TopMenu(tk.Menu):
         super().__init__(root, bg="lightblue")
         self.root = root
 
-        # Menu Arquivo
-        menu_arquivo = Menu(self, tearoff=0)
-        menu_arquivo.add_command(label="Abrir Pasta", command=self.open_folder)
-        menu_arquivo.add_command(
-            label="Salvar respostas", command=self.save_report
+        # File Menu
+        file_menu = Menu(self, tearoff=0)
+        file_menu.add_command(label="Open Folder", command=self.open_folder)
+        file_menu.add_command(
+            label="Save Answers", command=self.save_report
         )
-        self.add_cascade(label="Arquivo", menu=menu_arquivo)
+        self.add_cascade(label="File", menu=file_menu)
 
-        # Menu Ferramentas
-        menu_ferramentas = Menu(self, tearoff=0)
-        menu_ferramentas.add_checkbutton(label="Debug")
-        self.add_cascade(label="Ferramentas", menu=menu_ferramentas)
+        # Tools Menu
+        tools_menu = Menu(self, tearoff=0)
+        tools_menu.add_checkbutton(label="Debug")
+        self.add_cascade(label="Tools", menu=tools_menu)
 
-        # Menu Detecções
-        menu_deteccoes = Menu(self, tearoff=0)
-        menu_deteccoes.add_command(
-            label="Exportar YOLO",
+        # Export Menu
+        export_menu = Menu(self, tearoff=0)
+        export_menu.add_command(
+            label="Export YOLO",
             command=self.export_yolo
         )
-        menu_deteccoes.add_command(
-            label="Exportar Imagens com Respostas",
+        export_menu.add_command(
+            label="Export Images with Answers",
             command=self.export_images
         )
-        self.add_cascade(label="Exportar", menu=menu_deteccoes)
+        self.add_cascade(label="Export", menu=export_menu)
 
         # Menu Debug / Memory
         menu_debug = Menu(self, tearoff=0)

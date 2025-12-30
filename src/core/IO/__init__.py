@@ -29,4 +29,15 @@ class FileExtension(Enum):
 class IOError(Exception):
     """Base class for exceptions in this module."""
     pass
+
+
+__all__ = [
+    "ACCEPTED_IMAGE_EXTENTIONS",
+    "ACCEPTED_MODELS_EXTENTIONS",
+    "ROOT_PATH",
+    "MODELS_PATH",
+    "EXEMPLES_PATH",
+    "FileExtension",
+    "IOError",
+]
     

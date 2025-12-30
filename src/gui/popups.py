@@ -61,42 +61,42 @@ class ExportYoloPopup(tk.Toplevel):
     def __init__(self, root):
         super().__init__(root)
         self.root = root
-        self.title("Exportar YOLO")
+        self.title("Export YOLO")
         self.geometry("350x200")
         self.resizable(False, False)
         self.transient(root)
         self.grab_set()
         
-        tk.Label(self, text="Selecione a pasta de destino:", font=semititle_font).grid(row=0, column=0, columnspan=2, pady=5)
+        tk.Label(self, text="Select destination folder:", font=semititle_font).grid(row=0, column=0, columnspan=2, pady=5)
         
-        self.base_folder_var = tk.StringVar(value="Nenhuma pasta selecionada")
+        self.base_folder_var = tk.StringVar(value="No folder selected")
         self.folder_label = tk.Label(self, textvariable=self.base_folder_var)
         self.folder_label.grid(row=1, column=0, columnspan=2, pady=5)
         
-        tk.Button(self, text="Procurar", command=self.select_base_folder).grid(row=2, column=0, pady=5, padx=5)
+        tk.Button(self, text="Browse", command=self.select_base_folder).grid(row=2, column=0, pady=5, padx=5)
         
         self.config_frame = tk.Frame(self)
         self.config_frame.grid(row=2, column=1, pady=5, padx=5)
         self.save_images_var = tk.BooleanVar(value=False)
-        tk.Checkbutton(self.config_frame, text="Salvar imagens", variable=self.save_images_var).pack()
+        tk.Checkbutton(self.config_frame, text="Save images", variable=self.save_images_var).pack()
         self.global_anchoring_var = tk.BooleanVar(value=False)
-        tk.Checkbutton(self.config_frame, text="Referência global", variable=self.global_anchoring_var).pack()
+        tk.Checkbutton(self.config_frame, text="Global reference", variable=self.global_anchoring_var).pack()
         
-        tk.Label(self, text="Nome da pasta:", font=semititle_font).grid(row=3, column=0, pady=5, padx=5)
+        tk.Label(self, text="Folder name:", font=semititle_font).grid(row=3, column=0, pady=5, padx=5)
         self.folder_name_var = tk.StringVar(value="detections")
         tk.Entry(self, textvariable=self.folder_name_var).grid(row=3, column=1, pady=5, padx=5)
         
-        tk.Button(self, text="Exportar", command=self.export_yolo, width=25).grid(row=4, columnspan=2, column=0, pady=5)
+        tk.Button(self, text="Export", command=self.export_yolo, width=25).grid(row=4, columnspan=2, column=0, pady=5)
 
     def select_base_folder(self):
         """Opens a file dialog to select the base folder for export."""
         base_folder = filedialog.askdirectory()
-        self.base_folder_var.set(base_folder or "Nenhuma pasta selecionada")
+        self.base_folder_var.set(base_folder or "No folder selected")
 
     def export_yolo(self):
         """Exports data in YOLO format to the selected directory."""
         base_folder = self.base_folder_var.get()
-        if base_folder == "Nenhuma pasta selecionada":
+        if base_folder == "No folder selected":
             return
         folder_name = self.folder_name_var.get()
         save_images = self.save_images_var.get()
@@ -135,7 +135,7 @@ class SaveAsPopup(tk.Toplevel):
         format_menu = ttk.Combobox(self, textvariable=self.format_type_var, values=formats, state="readonly")
         format_menu.pack(pady=5)
         
-        tk.Button(self, text="Procurar", command=self.save_as).pack(pady=10)
+        tk.Button(self, text="Browse", command=self.save_as).pack(pady=10)
 
     def save_as(self):
         """Opens a file dialog and saves the report in the selected format."""
@@ -175,7 +175,7 @@ class ProgressPopup(tk.Toplevel):
         ):
         super().__init__(root)
         self.root = root
-        self.title("Aplicando pipeline")
+        self.title("Applying Pipeline")
         self.geometry("300x100")
         self.resizable(False, False)
         self.transient(self.root)
@@ -201,7 +201,7 @@ class ProgressPopup(tk.Toplevel):
 
     def __init_widgets(self):
         """Initializes the widgets in the popup window."""
-        self.label = tk.Label(self, text="Aplicando pipeline...")
+        self.label = tk.Label(self, text="Applying pipeline...")
         self.label.pack(pady=10)
         
         self.progress_label = tk.Label(self, text="0%")
@@ -224,7 +224,7 @@ class ProgressPopup(tk.Toplevel):
             elif self.progress_tracker.is_finished():
                 self.progress["value"] = 100.0
                 self.progress_label["text"] = "100%"
-                self.label["text"] = "Concluido!"
+                self.label["text"] = "Completed!"
                 break
 
             value = self.float_interval * step
