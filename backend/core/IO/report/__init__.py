@@ -1,0 +1,168 @@
+"""
+This module is intended to provide customizable functions to
+export the final report of the answers to different formats.
+"""
+# Definitions
+from __future__ import annotations
+
+from datetime import datetime
+from dataclasses import dataclass, field
+from abc import abstractmethod
+from pathlib import Path
+
+import pandas as pd
+
+from core.definitions import TestType
+from core.definitions.question import TestReport
+
+from ..base import Exporter
+from .. import FileExtension
+
+
+
+@dataclass
+class ReportData:
+    """
+    The data class that holds the data to be exported.
+    """
+    test_type : TestType = TestType.NULL
+    names : list[str] = field(default_factory=list)
+    test_reports : list[TestReport] = field(default_factory=list)
+
+    def to_pandas(self):
+        """
+        Method to convert the data to a pandas DataFrame.
+
+        The DataFrame will have the following structure:
+        ┌──────────┬──────────┬──────────┬──────────┐
+        │          │ cpf_owner│     1    │     2    │  .  .  .
+        ├──────────┼──────────┼──────────┼──────────┤  
+        │ img name │ XXXXXXXX │     A    │    B     │  .  .  .
+        ├──────────┼──────────┼──────────┼──────────┤
+        │   ...    │    ...   │    ...   │    ...   │  .  .  .
+        └──────────┴──────────┴──────────┴──────────┘
+        
+        returns:
+        --------
+        pd.DataFrame: The DataFrame with the data.
+        """
+        # Create the data dictionary
+        data_dict = {}
+        for name, test_report in zip(self.names, self.test_reports):
+            if not test_report:
+                null_report = TestReport.from_test_type(self.test_type)
+                data_dict[name] = null_report.to_dict()
+            else:
+                data_dict[name] = test_report.to_dict()
+        # Create the DataFrame
+        df = pd.DataFrame(data_dict).T
+        df = df[['owner_cpf'] + [c for c in df.columns if c != 'owner_cpf']]
+        return df
+
+
+
+
+class ReportIO(Exporter):
+    """
+    Base class for exporting the final report of the answers.
+    """
+
+    _registry: dict[str, ReportIO] = {}
+
+    ## Factory method ##
+    @classmethod
+    def get_by_name(cls, exporter_name: str) -> ReportIO:
+        """Factory method to create an exporter."""
+        if exporter_name not in cls._registry:
+            raise ValueError(f"Exporter {exporter_name} not found")
+        return cls._registry[exporter_name]
+    
+
+    ## Initialization ##
+    def __init_subclass__(cls):
+        """Automatically register subclasses."""
+        # Check if the subclass has the ex
+        if not hasattr(cls, "extension"):
+            raise ValueError("Subclasses must have a extension attribute")
+        ReportIO._registry[cls.__name__] = cls()
+
+
+    ## Getters and setters ##
+    @classmethod
+    def get_available_formats(cls) -> dict[str : FileExtension]:
+        """Return all registered export formats."""
+        return {name: cls.extension for name, cls in cls._registry.items()}
+    
+
+
+    ## Main abstract method ##
+    @abstractmethod
+    def write(self, data_struc : ReportData, fullpath : Path) -> bool:
+        """
+        Method that must be implemented by all exporters.
+        
+        This method should receive a ReportData object and write
+        the data to a file in the format of the exporter.
+
+        The return value should be True if the operation was successful,
+        and False otherwise.
+        """
+        pass
+
+
+    ## Tool methods for subclasses ##    
+    @classmethod
+    def get_config(cls) -> dict:
+        """Return the configuration of the exporter."""
+        #TODO: is this needed?
+        now = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+        return {'config': {'date': now}}
+
+
+    @classmethod
+    def assert_data(self, data: ReportData, fullpath: str):
+        """
+        Method to assert the data structure and variables before writing.
+
+        
+        Parameters
+        ----------
+        data : ReportData
+            The data to be written.
+        fullpath : str
+            The fullpath of the file to be written.
+
+        Raises
+        ------
+        IOError
+            If the data structure or variables are not as expected.
+        """
+        try:
+            # Assert right data structure
+            assert isinstance(data, ReportData), \
+                "The data must be a ReportData object"
+            # Assert right variables
+            assert isinstance(data.test_type, TestType), \
+                "The test type must be a TestType object"
+            assert data.test_type is not TestType.NULL, \
+                "The test type must be a valid TestType object"
+            # Assert has quaetions and names
+            assert len(data.names) > 0, \
+                "The names list must have at least one name"
+            assert len(data.names) == len(data.test_reports), \
+                "The number of names and test questions must be the same"
+            # Assert right fullpath
+            assert fullpath.endswith(self.extension.value), \
+                f"The fullpath must have the extension {self.extension}"
+        except AssertionError as e:
+            raise IOError(e) # This error wont be interpreted as a code error
+        
+
+
+
+# Concrete classes imports
+# this ensures that the concrete classes are created and registered
+
+from .json import *
+from .csv import *
+from .excel import *

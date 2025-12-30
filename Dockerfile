@@ -1,26 +1,43 @@
-FROM ubuntu:focal
+# Leitor de Simulados - Web Application Dockerfile
+FROM python:3.10-slim
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-ARG USERNAME=containeruser
-ARG USER_UID=1000
-ARG USER_GID=$USER_UID
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd --gid $USER_GID $USERNAME \
-    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
+# Set working directory
+WORKDIR /app
 
-RUN apt update
-
-RUN apt install -y python3-pip libgl1 libglib2.0-0
-
-RUN python3 -m pip install --upgrade pip
-
+# Copy requirements first for better caching
 COPY requirements.txt requirements.txt
 
-RUN pip3 install --extra-index-url https://google-coral.github.io/py-repo/ -r requirements.txt
+# Install Python dependencies
+RUN pip3 install --no-cache-dir --extra-index-url https://google-coral.github.io/py-repo/ -r requirements.txt
 
-RUN mkdir -p /workspace
+# Copy application code
+COPY backend/ ./backend/
+COPY frontend/ ./frontend/
+COPY models/ ./models/
 
-WORKDIR /workspace
+# Create uploads directory
+RUN mkdir -p /app/uploads
 
-USER $USERNAME
+# Expose port
+EXPOSE 8000
+
+# Set environment variables
+ENV PYTHONPATH=/app/backend:/app
+ENV PYTHONUNBUFFERED=1
+
+# Run the web server
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+

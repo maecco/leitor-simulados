@@ -5,40 +5,149 @@
 1. [Introdução](#introdução)
 2. [Requerimentos](#requerimentos)
 3. [Setup do programa](#setup-do-programa)  
-4. [Uso](#uso)
-5. [For Devs](#for-devs)
+4. [Uso - Web Application](#uso---web-application)
+5. [Uso - CLI (Legacy)](#uso---cli-legacy)
+6. [API Endpoints](#api-endpoints)
+7. [For Devs](#for-devs)
 
 
 ## Introdução
-  Algoritmo em desenvolvimento para fazer a leitura de cartões de respostas de simulados utilizando Visão Computacional e algoritimos tradicionais.
-  
+Algoritmo para fazer a leitura de cartões de respostas de simulados utilizando Visão Computacional.
+
+**Versão 2.0** - Agora disponível como aplicação web com interface moderna!
+
 ## Requerimentos
 Antes de começar a instalação, é necessário que os seguintes itens estejam instalados na sua máquina:  
 1. `python>=3.10`  
 O download para Mac, Windows e Linux pode ser feito no site oficial do Python:
 > https://www.python.org/downloads/
-2. `Docker`
+2. `Docker` (opcional, para deploy containerizado)
 O guia para a instalação pode ser encontrado em:
 > https://docs.docker.com/engine/install/
 
 ## Setup do programa
-- Clone o repositorio para um diretório local
-- Na raiz do repositório use: `docker compose up -d --build --force-recreate`
 
-## Uso
-### O script de leitura de simulados pode ser executado da seguinte forma:  
-- `docker exec -it detection_deploy_environment /bin/bash` para iniciar o "bash" do container;
-- `python3 ./src/exam_scanner.py --prova <TIPO_DE_PROVA> --input_directory <INPUT_DIR_PATH>` para executar inferências nas imagens presentes em `<INPUT_DIR_PATH>`
-- Outros parâmetros também podem ser ajustados ao executar esse script e podem ser vistos a partir do seguinte comando: `python3 ./src/exam_scanner.py -h`
+### Opção 1: Instalação Local (Recomendado para desenvolvimento)
+```bash
+# Clone o repositório
+git clone <repo-url>
+cd leitor-simulados
 
-### Execução do script que constrói o relatório final a partir das informações presentes no json gerado pelo código anterior.
-Já dentro do container docker o script pode ser executado da seguinte maneira:
-- `python3 ./src/build_report.py --input_directory <INPUT_DIR>`;
-- `INPUT_DIR` deve ser a pasta gerado pelo script anterior que contem o arquivo de texto `report.txt`;
-- Outros parâmetros também podem ser ajustados ao executar esse script e podem ser vistos a partir do seguinte comando: `python3 ./src/exam_scanner.py -h`;
+# Crie um ambiente virtual
+python3 -m venv venv
+source venv/bin/activate  # Linux/Mac
+# ou: venv\Scripts\activate  # Windows
 
-### Dicas.
-- O comando `--continue_on_fail` faz com que o código nao encerre em cada erro que encontra em uma detecção.
+# Instale as dependências
+pip install -r requirements.txt
+```
+
+### Opção 2: Docker
+```bash
+docker compose up -d --build
+```
+
+## Uso - Web Application
+
+### Executando o servidor web
+
+```bash
+# Método simples
+python run_web.py
+
+# Com opções
+python run_web.py --port 8080 --reload  # Desenvolvimento com auto-reload
+python run_web.py --workers 4           # Produção com múltiplos workers
+```
+
+Acesse `http://localhost:8000` no navegador.
+
+### Docker
+```bash
+docker compose up -d
+# Acesse http://localhost:8000
+```
+
+### Funcionalidades da Interface Web
+1. **Criar Sessão**: Selecione o tipo de prova (PS_ALUNOS, SIMULINHO, SIMUFSC, SIMUENEM)
+2. **Upload de Imagens**: Arraste e solte ou selecione múltiplas imagens
+3. **Configurar Modelos**: Escolha os modelos de detecção e ajuste os thresholds
+4. **Processar**: Processe uma ou todas as imagens
+5. **Visualizar Resultados**: Veja as detecções na imagem e as respostas identificadas
+6. **Editar Respostas**: Corrija manualmente respostas se necessário
+7. **Exportar**: Baixe os resultados em JSON ou CSV
+
+## Uso - Desktop Client
+
+O cliente desktop é uma aplicação leve que se conecta ao servidor para processamento.
+
+### Requisitos do Cliente
+```bash
+pip install requests pillow
+```
+
+### Executando o Cliente
+```bash
+# Conectar ao servidor local
+python run_client.py
+
+# Conectar a servidor remoto
+python run_client.py --server http://servidor:8000
+```
+
+### Funcionalidades do Cliente Desktop
+- **Conexão ao servidor**: Conecte a qualquer servidor Leitor de Simulados
+- **Upload de imagens**: Carregue imagens locais para processamento no servidor
+- **Visualização**: Veja as imagens com detecções sobrepostas
+- **Navegação**: Use setas ◀ ▶ ou teclado para navegar entre imagens
+- **Edição de respostas**: Corrija respostas manualmente
+- **Exportação**: Salve resultados em JSON ou CSV
+
+### Arquitetura Cliente-Servidor
+```
+┌─────────────────┐         HTTP/REST         ┌─────────────────┐
+│  Desktop Client │ ◄─────────────────────────► │   Web Server    │
+│   (Leve, GUI)   │                            │ (Processamento) │
+│                 │                            │                 │
+│  - Upload imgs  │                            │  - ML Models    │
+│  - View results │                            │  - Detection    │
+│  - Edit answers │                            │  - Reports      │
+└─────────────────┘                            └─────────────────┘
+```
+
+## API Endpoints
+
+A aplicação expõe uma API REST completa:
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/api/session/create` | Criar nova sessão |
+| GET | `/api/session/{id}` | Obter info da sessão |
+| DELETE | `/api/session/{id}` | Deletar sessão |
+| GET | `/api/models` | Listar modelos disponíveis |
+| POST | `/api/upload/{session_id}` | Upload de imagens |
+| GET | `/api/images/{session_id}` | Listar imagens da sessão |
+| GET | `/api/image/{session_id}/{image_id}` | Obter imagem |
+| POST | `/api/process/{session_id}/{image_id}` | Processar imagem |
+| POST | `/api/process-all/{session_id}` | Processar todas |
+| GET | `/api/report/{session_id}/{image_id}` | Obter relatório |
+| GET | `/api/reports/{session_id}` | Obter todos relatórios |
+| POST | `/api/update-answer/{session_id}/{image_id}` | Atualizar resposta |
+| GET | `/api/export/{session_id}` | Exportar resultados |
+
+## Uso - CLI (Legacy)
+
+A interface gráfica desktop ainda está disponível em `src/`:
+
+```bash
+python src/leitor_de_simulados.py
+```
+
+### Script de linha de comando (antigo):
+```bash
+docker exec -it detection_dev_environment /bin/bash
+python3 ./src/exam_scanner.py --prova <TIPO_DE_PROVA> --input_directory <INPUT_DIR_PATH>
+```
 
 ## For Devs
 ### EFscanAlgo

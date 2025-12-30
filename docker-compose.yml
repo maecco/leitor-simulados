@@ -1,14 +1,38 @@
 version: '3.8'
 
 services:
-  training_environment:
-    restart: always
-    container_name: detection_deploy_environment
+  # Web Application Service
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models:ro
+      - ./uploads:/app/uploads
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Legacy: Development environment (optional)
+  dev_environment:
+    restart: "no"
+    container_name: detection_dev_environment
     build:
       context: .
       dockerfile: ./Dockerfile
     volumes:
       - type: bind
         source: .
-        target: /workspace
+        target: /app
     command: tail -F anything
+    profiles:
+      - dev
+

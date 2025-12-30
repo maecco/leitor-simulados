@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leitor de Simulados</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <h1>📝 Leitor de Simulados</h1>
+        <div class="session-info" id="sessionInfo">
+            <span id="sessionStatus">Nenhuma sessão ativa</span>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <!-- Left Panel: Controls -->
+        <aside class="sidebar">
+            <!-- Session Setup -->
+            <section class="panel">
+                <h2>Nova Sessão</h2>
+                <form id="sessionForm" class="form-group">
+                    <label for="testType">Tipo de Prova:</label>
+                    <select id="testType" name="testType" required>
+                        <option value="">Selecione...</option>
+                        {% for test in test_types %}
+                        <option value="{{ test }}">{{ test }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary">Criar Sessão</button>
+                </form>
+            </section>
+
+            <!-- Image Upload -->
+            <section class="panel" id="uploadPanel" style="display: none;">
+                <h2>Upload de Imagens</h2>
+                <div class="upload-area" id="uploadArea">
+                    <input type="file" id="fileInput" multiple accept="image/*" hidden>
+                    <div class="upload-content">
+                        <span class="upload-icon">📁</span>
+                        <p>Arraste imagens aqui ou <button class="btn-link" id="browseBtn">procure</button></p>
+                    </div>
+                </div>
+                <div id="uploadProgress" class="progress-container" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <span id="progressText">0%</span>
+                </div>
+            </section>
+
+            <!-- Model Selection -->
+            <section class="panel" id="modelPanel" style="display: none;">
+                <h2>Configuração de Modelos</h2>
+                <form id="modelForm" class="form-group">
+                    <div class="form-row">
+                        <label for="fsModel">1ª Etapa:</label>
+                        <select id="fsModel" name="fsModel" required>
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="fsThreshold">Threshold:</label>
+                        <input type="range" id="fsThreshold" min="0.1" max="0.9" step="0.1" value="0.5">
+                        <span id="fsThresholdValue">0.5</span>
+                    </div>
+                    <div class="form-row">
+                        <label for="ssModel">2ª Etapa:</label>
+                        <select id="ssModel" name="ssModel" required>
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="ssThreshold">Threshold:</label>
+                        <input type="range" id="ssThreshold" min="0.1" max="0.9" step="0.1" value="0.5">
+                        <span id="ssThresholdValue">0.5</span>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-primary" id="processBtn">Processar Atual</button>
+                        <button type="button" class="btn btn-secondary" id="processAllBtn">Processar Todas</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Export Options -->
+            <section class="panel" id="exportPanel" style="display: none;">
+                <h2>Exportar Resultados</h2>
+                <div class="btn-group">
+                    <button class="btn btn-outline" id="exportJsonBtn">JSON</button>
+                    <button class="btn btn-outline" id="exportCsvBtn">CSV</button>
+                </div>
+            </section>
+        </aside>
+
+        <!-- Center: Image Display -->
+        <section class="image-viewer">
+            <div class="toolbar">
+                <button class="btn-icon" id="prevImageBtn" title="Anterior">◀</button>
+                <span id="imageCounter">0 / 0</span>
+                <button class="btn-icon" id="nextImageBtn" title="Próxima">▶</button>
+                <div class="toolbar-spacer"></div>
+                <label class="toggle-label">
+                    <input type="checkbox" id="showDetections" checked>
+                    Mostrar detecções
+                </label>
+                <button class="btn-icon" id="zoomInBtn" title="Zoom +">🔍+</button>
+                <button class="btn-icon" id="zoomOutBtn" title="Zoom -">🔍-</button>
+                <button class="btn-icon" id="fitBtn" title="Ajustar">⊡</button>
+            </div>
+            <div class="canvas-container" id="canvasContainer">
+                <div class="placeholder" id="placeholder">
+                    <span>📷</span>
+                    <p>Nenhuma imagem carregada</p>
+                </div>
+                <canvas id="imageCanvas" style="display: none;"></canvas>
+            </div>
+        </section>
+
+        <!-- Right Panel: Image List & Results -->
+        <aside class="results-panel">
+            <!-- Image List -->
+            <section class="panel">
+                <h2>Imagens <span id="imageCount">(0)</span></h2>
+                <ul class="image-list" id="imageList">
+                    <li class="empty-message">Nenhuma imagem carregada</li>
+                </ul>
+            </section>
+
+            <!-- Results/Answers -->
+            <section class="panel" id="resultsPanel" style="display: none;">
+                <h2>Respostas</h2>
+                <div class="cpf-display">
+                    <label>CPF:</label>
+                    <span id="cpfValue">-</span>
+                </div>
+                <div class="answers-grid" id="answersGrid">
+                    <!-- Answers will be populated dynamically -->
+                </div>
+            </section>
+        </aside>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="spinner"></div>
+        <p id="loadingMessage">Processando...</p>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

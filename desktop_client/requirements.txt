@@ -1,0 +1,14 @@
+# Desktop Client Requirements
+# Minimal dependencies - server handles heavy processing
+
+# HTTP client
+requests>=2.31.0
+
+# GUI
+pillow>=10.0.0
+
+# Already included in Python standard library:
+# - tkinter (GUI framework)
+# - threading
+# - base64
+# - pathlib
