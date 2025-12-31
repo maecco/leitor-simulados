@@ -1,18 +1,18 @@
 """
-Tests for the FastAPI backend endpoints
+Tests for the FastAPI src endpoints
 """
 import pytest
 import sys
 from pathlib import Path
 
-# Add backend to path
+# Add src to path
 PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "backend"))
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 # Skip all tests if core dependencies are missing
 try:
     from fastapi.testclient import TestClient
-    from backend.main import app
+    from src.main import app
     DEPS_AVAILABLE = True
 except ImportError as e:
     DEPS_AVAILABLE = False
@@ -230,12 +230,16 @@ class TestExportEndpoints:
         assert response.status_code == 400
 
 
-class TestHomePage:
-    """Tests for the web page"""
+class TestRootEndpoint:
+    """Tests for the root endpoint"""
     
-    def test_home_page(self, client):
-        """Test that home page loads"""
+    def test_root_returns_api_info(self, client):
+        """Test that root endpoint returns API info"""
         response = client.get("/")
         
         assert response.status_code == 200
-        assert "text/html" in response.headers["content-type"]
+        assert "application/json" in response.headers["content-type"]
+        data = response.json()
+        assert "message" in data
+        assert "docs" in data
+        assert "version" in data

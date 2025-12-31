@@ -5,8 +5,8 @@ from enum import Enum
 # CoreImages
 ACCEPTED_IMAGE_EXTENTIONS = {'.png', '.jpg', '.jpeg'}
 ACCEPTED_MODELS_EXTENTIONS = {'.tflite', '.py', '.pt'}
-# Paths
-ROOT_PATH = Path(__file__).parent.parent.parent.parent # Tataravo raiz
+# Paths - Updated for src structure
+ROOT_PATH = Path(__file__).parent.parent.parent.parent  # Project root
 MODELS_PATH = ROOT_PATH / 'models'
 EXEMPLES_PATH = ROOT_PATH / 'exemple_images'
 

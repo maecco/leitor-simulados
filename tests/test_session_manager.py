@@ -4,8 +4,8 @@ Tests for the SessionManager service
 import pytest
 from datetime import datetime, timedelta
 
-from backend.services.session_manager import SessionManager, Session
-from backend.core.definitions.enums import TestType
+from src.services.session_manager import SessionManager, Session
+from src.core.definitions.enums import TestType
 
 
 class TestSession:

@@ -1,1 +1,0 @@
-from .imageEditor import ImageEditorApp

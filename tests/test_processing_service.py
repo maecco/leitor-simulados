@@ -6,13 +6,13 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-# Add backend to path
+# Add src to path
 PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "backend"))
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 # Skip tests if core dependencies are missing
 try:
-    from backend.services.processing import ProcessingService, ModelCache
+    from src.services.processing import ProcessingService, ModelCache
     DEPS_AVAILABLE = True
 except ImportError as e:
     DEPS_AVAILABLE = False

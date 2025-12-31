@@ -24,7 +24,7 @@ COPY requirements.txt requirements.txt
 RUN pip3 install --no-cache-dir --extra-index-url https://google-coral.github.io/py-repo/ -r requirements.txt
 
 # Copy application code
-COPY backend/ ./backend/
+COPY src/ ./src/
 COPY frontend/ ./frontend/
 COPY models/ ./models/
 
@@ -35,9 +35,9 @@ RUN mkdir -p /app/uploads
 EXPOSE 8000
 
 # Set environment variables
-ENV PYTHONPATH=/app/backend:/app
+ENV PYTHONPATH=/app/src:/app
 ENV PYTHONUNBUFFERED=1
 
 # Run the web server
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
 

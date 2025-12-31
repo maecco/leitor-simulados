@@ -136,12 +136,38 @@ class TestReport:
     def get_cpf_updated(self) -> bool:
         return self._cpf_updated
     
-    def to_dict(self) -> list:
-        d = {
+    def to_dict(self) -> dict:
+        """Convert report to dictionary for JSON serialization"""
+        questions = []
+        for q in self._questions:
+            answer_value = q.answer.name if hasattr(q.answer, 'name') else str(q.answer)
+            questions.append({
+                'number': q.number,
+                'answer': answer_value,
+                'updated': q.updated
+            })
+        
+        return {
             'owner_cpf': self._owner_student_cpf,
-            **{ f"{q.number:02}" : q.answer.name for q in self._questions }
+            'test_type': self._test_type.name,
+            'questions': questions
         }
-        return d
+    
+    def update_answer_by_number(self, question_number: int, answer_str: str) -> None:
+        """Update answer for a specific question by number"""
+        if 1 <= question_number <= len(self._questions):
+            q = self._questions[question_number - 1]
+            if isinstance(q.answer, AlphaAnswer):
+                try:
+                    q.answer = AlphaAnswer[answer_str]
+                except KeyError:
+                    q.answer = AlphaAnswer.NULL
+            elif isinstance(q.answer, NumericAnswer):
+                try:
+                    q.answer.set(int(answer_str))
+                except ValueError:
+                    q.answer.set_null()
+            q.updated = True
 
 
 class PsQuestions(TestReport):

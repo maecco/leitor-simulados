@@ -110,7 +110,7 @@ class TestDetectionAttributes:
     
     @pytest.fixture
     def detection_source_file(self) -> Path:
-        return Path(__file__).parent.parent / "backend" / "core" / "detection" / "base.py"
+        return Path(__file__).parent.parent / "src" / "core" / "detection" / "base.py"
     
     def test_detection_has_expected_attributes(self, detection_source_file):
         """Verify Detection class has the attributes we expect (via AST)."""
@@ -141,7 +141,7 @@ class TestDetectionAttributes:
     
     def test_processing_service_uses_correct_detection_attrs(self):
         """Check that processing.py uses correct Detection attributes."""
-        processing_file = Path(__file__).parent.parent / "backend" / "services" / "processing.py"
+        processing_file = Path(__file__).parent.parent / "src" / "services" / "processing.py"
         
         if not processing_file.exists():
             pytest.skip("processing.py not found")
@@ -172,7 +172,7 @@ class TestIntBoundingBoxAttributes:
     
     @pytest.fixture
     def geometry_source_file(self) -> Path:
-        return Path(__file__).parent.parent / "backend" / "core" / "definitions" / "geometry.py"
+        return Path(__file__).parent.parent / "src" / "core" / "definitions" / "geometry.py"
     
     def test_bbox_has_expected_attributes(self, geometry_source_file):
         """Verify IntBoundingBox has correct structure (via AST)."""
@@ -200,7 +200,7 @@ class TestIntBoundingBoxAttributes:
     
     def test_processing_service_uses_correct_bbox_attrs(self):
         """Check that processing.py accesses bbox through p_min/p_max."""
-        processing_file = Path(__file__).parent.parent / "backend" / "services" / "processing.py"
+        processing_file = Path(__file__).parent.parent / "src" / "services" / "processing.py"
         
         if not processing_file.exists():
             pytest.skip("processing.py not found")
@@ -239,7 +239,7 @@ class TestLabelMapAttributes:
     
     @pytest.fixture
     def label_map_source_file(self) -> Path:
-        return Path(__file__).parent.parent / "backend" / "core" / "detection" / "label_map.py"
+        return Path(__file__).parent.parent / "src" / "core" / "detection" / "label_map.py"
     
     def test_label_map_has_expected_attributes(self, label_map_source_file):
         """Verify LabelMap has correct structure (via AST)."""
@@ -265,7 +265,7 @@ class TestLabelMapAttributes:
     
     def test_processing_service_uses_correct_label_map_access(self):
         """Check that processing.py accesses label_map correctly."""
-        processing_file = Path(__file__).parent.parent / "backend" / "services" / "processing.py"
+        processing_file = Path(__file__).parent.parent / "src" / "services" / "processing.py"
         
         if not processing_file.exists():
             pytest.skip("processing.py not found")
@@ -287,7 +287,7 @@ class TestCoreImageAttributes:
     
     @pytest.fixture
     def core_image_source_file(self) -> Path:
-        return Path(__file__).parent.parent / "backend" / "core" / "image.py"
+        return Path(__file__).parent.parent / "src" / "core" / "image.py"
     
     def test_core_image_has_expected_attributes(self, core_image_source_file):
         """Verify CoreImage has the attributes we use (via AST)."""
@@ -310,7 +310,7 @@ class TestAttributeConsistency:
     
     def test_no_class_id_in_service_files(self):
         """Ensure no service files use 'det.class_id' on Detection objects."""
-        services_dir = Path(__file__).parent.parent / "backend" / "services"
+        services_dir = Path(__file__).parent.parent / "src" / "services"
         
         if not services_dir.exists():
             pytest.skip("services directory not found")
@@ -330,7 +330,7 @@ class TestAttributeConsistency:
     
     def test_no_wrong_bbox_access_in_service_files(self):
         """Ensure no service files access bbox.x1/y1/x2/y2 directly."""
-        services_dir = Path(__file__).parent.parent / "backend" / "services"
+        services_dir = Path(__file__).parent.parent / "src" / "services"
         
         if not services_dir.exists():
             pytest.skip("services directory not found")
@@ -357,7 +357,7 @@ class TestAttributeConsistency:
     
     def test_detection_attribute_documentation(self):
         """Verify Detection class documents model_assing_id in docstring."""
-        detection_file = Path(__file__).parent.parent / "backend" / "core" / "detection" / "base.py"
+        detection_file = Path(__file__).parent.parent / "src" / "core" / "detection" / "base.py"
         
         if not detection_file.exists():
             pytest.skip("Detection source file not found")
@@ -378,8 +378,8 @@ class TestProcessingServicePatterns:
     """Test specific patterns that processing.py should use."""
     
     def test_uses_model_assing_id_for_label_lookup(self):
-        """Verify label lookups use model_assing_id."""
-        processing_file = Path(__file__).parent.parent / "backend" / "services" / "processing.py"
+        """Verify label lookups use model_assing_id with detections list."""
+        processing_file = Path(__file__).parent.parent / "src" / "services" / "processing.py"
         
         if not processing_file.exists():
             pytest.skip("processing.py not found")
@@ -387,13 +387,13 @@ class TestProcessingServicePatterns:
         with open(processing_file, 'r') as f:
             content = f.read()
         
-        # Should have patterns like: get_name(det.model_assing_id)
-        assert re.search(r'get_name\(det\.model_assing_id\)', content), \
-            "processing.py should use 'det.model_assing_id' for label lookups"
+        # Should have patterns like: detections[det.model_assing_id].name
+        assert re.search(r'detections\[det\.model_assing_id\]\.name', content), \
+            "processing.py should use 'detections[det.model_assing_id].name' for label lookups"
     
     def test_uses_p_min_p_max_for_bbox(self):
         """Verify bbox access uses p_min/p_max structure."""
-        processing_file = Path(__file__).parent.parent / "backend" / "services" / "processing.py"
+        processing_file = Path(__file__).parent.parent / "src" / "services" / "processing.py"
         
         if not processing_file.exists():
             pytest.skip("processing.py not found")

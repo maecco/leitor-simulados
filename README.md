@@ -1,190 +1,136 @@
-# leitor-simulados
+# Leitor de Simulados API
 
-### Sumário
+API REST para processamento de folhas de resposta de simulados usando modelos de detecção YOLO.
 
-1. [Introdução](#introdução)
-2. [Requerimentos](#requerimentos)
-3. [Setup do programa](#setup-do-programa)  
-4. [Uso - Web Application](#uso---web-application)
-5. [Uso - CLI (Legacy)](#uso---cli-legacy)
-6. [API Endpoints](#api-endpoints)
-7. [For Devs](#for-devs)
+## Estrutura do Projeto
 
+```
+├── src/              # Código da API FastAPI
+│   ├── main.py          # Endpoints da API
+│   ├── schemas.py       # Schemas Pydantic
+│   ├── core/            # Lógica de detecção e processamento
+│   └── services/        # Serviços de negócio
+├── models/              # Modelos de detecção
+│   ├── YoloV8/         # Modelos YOLO
+│   └── LabelMaps.json  # Mapeamento de labels
+├── tests/              # Testes automatizados
+├── run.py              # Script de execução
+├── requirements.txt    # Dependências Python
+├── Dockerfile          # Imagem Docker
+└── docker-compose.yml  # Composição Docker
+```
 
-## Introdução
-Algoritmo para fazer a leitura de cartões de respostas de simulados utilizando Visão Computacional.
+## Instalação
 
-**Versão 2.0** - Agora disponível como aplicação web com interface moderna!
+### Requisitos
+- Python 3.10+
+- pip
 
-## Requerimentos
-Antes de começar a instalação, é necessário que os seguintes itens estejam instalados na sua máquina:  
-1. `python>=3.10`  
-O download para Mac, Windows e Linux pode ser feito no site oficial do Python:
-> https://www.python.org/downloads/
-2. `Docker` (opcional, para deploy containerizado)
-O guia para a instalação pode ser encontrado em:
-> https://docs.docker.com/engine/install/
+### Configuração
 
-## Setup do programa
-
-### Opção 1: Instalação Local (Recomendado para desenvolvimento)
 ```bash
-# Clone o repositório
-git clone <repo-url>
-cd leitor-simulados
-
-# Crie um ambiente virtual
-python3 -m venv venv
+# Criar ambiente virtual
+python -m venv venv
 source venv/bin/activate  # Linux/Mac
-# ou: venv\Scripts\activate  # Windows
+# ou
+venv\Scripts\activate  # Windows
 
-# Instale as dependências
+# Instalar dependências
 pip install -r requirements.txt
 ```
 
-### Opção 2: Docker
+## Execução
+
+### Desenvolvimento
 ```bash
-docker compose up -d --build
+python run.py --reload
 ```
 
-## Uso - Web Application
-
-### Executando o servidor web
-
+### Produção
 ```bash
-# Método simples
-python run_web.py
-
-# Com opções
-python run_web.py --port 8080 --reload  # Desenvolvimento com auto-reload
-python run_web.py --workers 4           # Produção com múltiplos workers
+python run.py --workers 4
 ```
-
-Acesse `http://localhost:8000` no navegador.
 
 ### Docker
 ```bash
-docker compose up -d
-# Acesse http://localhost:8000
-```
-
-### Funcionalidades da Interface Web
-1. **Criar Sessão**: Selecione o tipo de prova (PS_ALUNOS, SIMULINHO, SIMUFSC, SIMUENEM)
-2. **Upload de Imagens**: Arraste e solte ou selecione múltiplas imagens
-3. **Configurar Modelos**: Escolha os modelos de detecção e ajuste os thresholds
-4. **Processar**: Processe uma ou todas as imagens
-5. **Visualizar Resultados**: Veja as detecções na imagem e as respostas identificadas
-6. **Editar Respostas**: Corrija manualmente respostas se necessário
-7. **Exportar**: Baixe os resultados em JSON ou CSV
-
-## Uso - Desktop Client
-
-O cliente desktop é uma aplicação leve que se conecta ao servidor para processamento.
-
-### Requisitos do Cliente
-```bash
-pip install requests pillow
-```
-
-### Executando o Cliente
-```bash
-# Conectar ao servidor local
-python run_client.py
-
-# Conectar a servidor remoto
-python run_client.py --server http://servidor:8000
-```
-
-### Funcionalidades do Cliente Desktop
-- **Conexão ao servidor**: Conecte a qualquer servidor Leitor de Simulados
-- **Upload de imagens**: Carregue imagens locais para processamento no servidor
-- **Visualização**: Veja as imagens com detecções sobrepostas
-- **Navegação**: Use setas ◀ ▶ ou teclado para navegar entre imagens
-- **Edição de respostas**: Corrija respostas manualmente
-- **Exportação**: Salve resultados em JSON ou CSV
-
-### Arquitetura Cliente-Servidor
-```
-┌─────────────────┐         HTTP/REST         ┌─────────────────┐
-│  Desktop Client │ ◄─────────────────────────► │   Web Server    │
-│   (Leve, GUI)   │                            │ (Processamento) │
-│                 │                            │                 │
-│  - Upload imgs  │                            │  - ML Models    │
-│  - View results │                            │  - Detection    │
-│  - Edit answers │                            │  - Reports      │
-└─────────────────┘                            └─────────────────┘
+docker-compose up -d
 ```
 
 ## API Endpoints
 
-A aplicação expõe uma API REST completa:
+A documentação interativa está disponível em `/docs` após iniciar o servidor.
+
+### Principais Endpoints
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
-| POST | `/api/session/create` | Criar nova sessão |
-| GET | `/api/session/{id}` | Obter info da sessão |
-| DELETE | `/api/session/{id}` | Deletar sessão |
-| GET | `/api/models` | Listar modelos disponíveis |
+| GET | `/api/health` | Health check |
+| GET | `/api/models` | Lista modelos disponíveis |
+| POST | `/api/session/create` | Cria sessão de trabalho |
 | POST | `/api/upload/{session_id}` | Upload de imagens |
-| GET | `/api/images/{session_id}` | Listar imagens da sessão |
-| GET | `/api/image/{session_id}/{image_id}` | Obter imagem |
-| POST | `/api/process/{session_id}/{image_id}` | Processar imagem |
-| POST | `/api/process-all/{session_id}` | Processar todas |
-| GET | `/api/report/{session_id}/{image_id}` | Obter relatório |
-| GET | `/api/reports/{session_id}` | Obter todos relatórios |
-| POST | `/api/update-answer/{session_id}/{image_id}` | Atualizar resposta |
-| GET | `/api/export/{session_id}` | Exportar resultados |
+| GET | `/api/images/{session_id}` | Lista imagens da sessão |
+| POST | `/api/process/{session_id}/{image_id}` | Processa imagem |
+| GET | `/api/report/{session_id}` | Obtém relatório |
+| POST | `/api/export/{session_id}/csv` | Exporta para CSV |
 
-## Uso - CLI (Legacy)
+### Exemplo de Uso
 
-A interface gráfica desktop ainda está disponível em `src/`:
+```python
+import requests
 
-```bash
-python src/leitor_de_simulados.py
+BASE_URL = "http://localhost:8000/api"
+
+# Criar sessão
+session = requests.post(f"{BASE_URL}/session/create").json()
+session_id = session["session_id"]
+
+# Upload de imagem
+with open("imagem.jpg", "rb") as f:
+    files = {"file": f}
+    response = requests.post(f"{BASE_URL}/upload/{session_id}", files=files)
+    image_id = response.json()["images"][0]["id"]
+
+# Processar imagem
+process_data = {
+    "first_stage_model": "YoloV8/first_stage/general_fs.pt",
+    "second_stage_model": "YoloV8/second_stage/general_ss_v2.pt",
+    "test_type": "PS_ALUNOS"
+}
+result = requests.post(
+    f"{BASE_URL}/process/{session_id}/{image_id}",
+    params=process_data
+).json()
+
+print(result["report"])
 ```
 
-### Script de linha de comando (antigo):
+## Testes
+
 ```bash
-docker exec -it detection_dev_environment /bin/bash
-python3 ./src/exam_scanner.py --prova <TIPO_DE_PROVA> --input_directory <INPUT_DIR_PATH>
+# Rodar todos os testes
+pytest
+
+# Testes com output detalhado
+pytest -v -s
+
+# Testes de integração (requerem modelos)
+pytest tests/test_integration_processing.py -v -s
 ```
 
-## For Devs
-### EFscanAlgo
-#### Adicionando pipeline
-É possivel implementar novas pipelines de correção das provas dentro do algoritimo de correção convencional, para fazer isso é preciso:  
+## Modelos
 
-Criar um arquivo `.py` dentro de `models/EFscanAlgo/first_stage` ou `models/EFscanAlgo/first_stage` dependendo do estagio que se deseja implementar.  
+### First Stage (Primeiro Estágio)
+Detecta blocos na folha de resposta:
+- `CPF_BLOCK` - Bloco de CPF
+- `QUESTION_BLOCK` - Bloco de questões
 
-![Screenshot from 2024-08-17 20-35-25](https://github.com/user-attachments/assets/ea6b6770-502c-461e-aa24-7099d381079f)  
+### Second Stage (Segundo Estágio)
+Detecta elementos dentro dos blocos:
+- `SELECTED_BALL` - Bolinha marcada
+- `UNSELECTED_BALL` - Bolinha não marcada
 
-O arquivo de pipeline deve conter implementada uma funçao chamada `detect` que será chamada pelo algoritimo principal, para cada imagem a ser analisada, e cuja assinatura deve ser a seguinte:  
+## Licença
 
-![Screenshot from 2024-08-17 20-15-47](https://github.com/user-attachments/assets/a97d4378-cdaa-465f-b409-e6003689c17a)  
-
-Onde:  
-- `scanner` é a classe base do algoritimo
-- `img` é da classe `core.image.Image` contendo a imagem a ser processada.
-- `Detection` é a classe cuja `core.object_detecion.Detection`
-
-#### Init Pipeline
-O arquivo de pipeline tambem pode conter uma função chamada `init_pipeline`, que pode ser implementada ou nao, e que será chamada uma vez apenas. A funçao deve ter a seguinte assinatura:
-
-![Screenshot from 2024-08-17 21-03-08](https://github.com/user-attachments/assets/aef297ea-9fc9-4090-a3aa-d54575cd0977)  
-
-Onde:  
-- `scanner` é a classe base do algoritimo
-- `config` é um dicionario que contem informaçoes:
-![Screenshot from 2024-08-17 21-23-06](https://github.com/user-attachments/assets/8f74704f-d95b-452a-a86b-d0290996ba75)  
-**Repare que, em `stage` é a real faze em que esta sendo corrigida, e em `model->stage` é o estagio que o modelo supostamente deve corrigir. (É possivel selecionar um modelo de correçao do segundo estagio para corrigir o primeiro estagio, embora isso nao faça muito sentido.)
-
-
-#### Exemplo de uso:
-Essa funçao pode ser usada para iniciar variáveis que serão usadas na funçao `detect` como na pipeline `ef_default_algo` onde é iniciado um modelo yolo que sera futuramente usado para encontrar os cpfs:  
-Em `init_pipeline`:  
-![Screenshot from 2024-08-17 21-11-10](https://github.com/user-attachments/assets/e46e162d-fe31-41ef-87a0-c2189eb27cd5)  
-
-Em `detect`:  
-![Screenshot from 2024-08-17 21-12-54](https://github.com/user-attachments/assets/5414abba-4e9e-4385-a6cd-fae6efa254b6)  
+MIT License - veja [LICENSE](LICENSE)
 
 
