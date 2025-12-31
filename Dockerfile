@@ -25,7 +25,6 @@ RUN pip3 install --no-cache-dir --extra-index-url https://google-coral.github.io
 
 # Copy application code
 COPY src/ ./src/
-COPY frontend/ ./frontend/
 COPY models/ ./models/
 
 # Create uploads directory

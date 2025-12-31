@@ -2,6 +2,7 @@
 Processing Service
 Handles image detection and report generation
 """
+import logging
 from typing import Optional, Dict, Any, List
 from pathlib import Path
 import io
@@ -20,6 +21,8 @@ from core.detection.label_map import LabelMap
 from core.builder import Builder
 from core.IO.base import Importer
 from core.IO import MODELS_PATH
+
+logger = logging.getLogger(__name__)
 
 
 class ModelCache:
@@ -87,8 +90,9 @@ class ProcessingService:
                     "target_stage": target_stage,
                     "rel_path": str(rel_path)
                 })
+                logger.debug(f"Found model: {name} ({model_type}, {target_stage})")
         except Exception as e:
-            print(f"Error scanning models: {e}")
+            logger.error(f"Error scanning models: {e}")
     
     def get_available_models(self) -> List[Dict[str, Any]]:
         """Get list of available models"""
@@ -194,7 +198,7 @@ class ProcessingService:
             
             return report
         except Exception as e:
-            print(f"Error building report: {e}")
+            logger.error(f"Error building report: {e}", exc_info=True)
             return None
     
     def _draw_detections(self, core_image: CoreImage) -> np.ndarray:
