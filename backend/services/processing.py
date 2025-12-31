@@ -146,9 +146,8 @@ class ProcessingService:
             for crop in core_image.crops:
                 crop.make_detections_with_model(ss_model, ss_threshold)
         
-        # Build blocks from detections
-        container = DetectionContainer.from_image(core_image)
-        blocks = TestBlocks.from_container(container, test_type)
+        # Build blocks from detections using CoreImage's to_block method
+        blocks = core_image.to_block()
         
         # Build report
         report = self._build_report(blocks, test_type)
@@ -209,16 +208,16 @@ class ProcessingService:
                 color = (0, 255, 0)  # Green for first stage
                 cv2.rectangle(
                     img,
-                    (bbox.x1, bbox.y1),
-                    (bbox.x2, bbox.y2),
+                    (bbox.p_min.x, bbox.p_min.y),
+                    (bbox.p_max.x, bbox.p_max.y),
                     color,
                     2
                 )
                 # Add label
-                label = f"{det.class_id}: {det.score:.2f}"
+                label = f"{det.model_assing_id}: {det.score:.2f}"
                 cv2.putText(
                     img, label,
-                    (bbox.x1, bbox.y1 - 10),
+                    (bbox.p_min.x, bbox.p_min.y - 10),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.5, color, 1
                 )
@@ -232,8 +231,8 @@ class ProcessingService:
                     color = (255, 0, 0)  # Blue for second stage
                     cv2.rectangle(
                         img,
-                        (global_bbox.x1, global_bbox.y1),
-                        (global_bbox.x2, global_bbox.y2),
+                        (global_bbox.p_min.x, global_bbox.p_min.y),
+                        (global_bbox.p_max.x, global_bbox.p_max.y),
                         color,
                         1
                     )
@@ -253,17 +252,17 @@ class ProcessingService:
         if core_image.detections:
             for det in core_image.detections:
                 bbox = det.to_pixels()
-                class_name = fs_model.label_map.get_name(det.class_id) if fs_model.label_map else str(det.class_id)
+                class_name = fs_model.label_map.detections[det.model_assing_id].name if fs_model.label_map else str(det.model_assing_id)
                 detections.append({
                     "stage": "first",
-                    "class_id": det.class_id,
+                    "class_id": det.model_assing_id,
                     "class_name": class_name,
                     "confidence": det.score,
                     "bbox": {
-                        "x1": bbox.x1,
-                        "y1": bbox.y1,
-                        "x2": bbox.x2,
-                        "y2": bbox.y2
+                        "x1": bbox.p_min.x,
+                        "y1": bbox.p_min.y,
+                        "x2": bbox.p_max.x,
+                        "y2": bbox.p_max.y
                     }
                 })
         
@@ -272,17 +271,17 @@ class ProcessingService:
             if crop.detections:
                 for det in crop.detections:
                     global_bbox = det.to_global_pixels()
-                    class_name = ss_model.label_map.get_name(det.class_id) if ss_model.label_map else str(det.class_id)
+                    class_name = ss_model.label_map.detections[det.model_assing_id].name if ss_model.label_map else str(det.model_assing_id)
                     detections.append({
                         "stage": "second",
-                        "class_id": det.class_id,
+                        "class_id": det.model_assing_id,
                         "class_name": class_name,
                         "confidence": det.score,
                         "bbox": {
-                            "x1": global_bbox.x1,
-                            "y1": global_bbox.y1,
-                            "x2": global_bbox.x2,
-                            "y2": global_bbox.y2
+                            "x1": global_bbox.p_min.x,
+                            "y1": global_bbox.p_min.y,
+                            "x2": global_bbox.p_max.x,
+                            "y2": global_bbox.p_max.y
                         }
                     })
         

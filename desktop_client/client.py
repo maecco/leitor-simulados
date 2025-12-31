@@ -271,7 +271,8 @@ class DesktopClient(tk.Tk):
                 
                 self.after(0, lambda: self._on_connected(models, test_types))
             except Exception as e:
-                self.after(0, lambda: self._on_connect_error(str(e)))
+                error_msg = str(e)
+                self.after(0, lambda msg=error_msg: self._on_connect_error(msg))
         
         threading.Thread(target=do_connect, daemon=True).start()
     
@@ -322,7 +323,8 @@ class DesktopClient(tk.Tk):
                 result = self.api.create_session(test_type)
                 self.after(0, lambda: self._on_session_created(result))
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror("Erro", str(e)))
+                error_msg = str(e)
+                self.after(0, lambda msg=error_msg: messagebox.showerror("Erro", msg))
         
         threading.Thread(target=do_create, daemon=True).start()
     
@@ -364,7 +366,8 @@ class DesktopClient(tk.Tk):
                 result = self.api.upload_images(self.session_id, files)
                 self.after(0, lambda: self._on_images_uploaded(result))
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror("Erro", str(e)))
+                error_msg = str(e)
+                self.after(0, lambda msg=error_msg: messagebox.showerror("Erro", msg))
         
         threading.Thread(target=do_upload, daemon=True).start()
     
@@ -572,7 +575,8 @@ class DesktopClient(tk.Tk):
                 )
                 self.after(0, lambda: self._on_processed(result))
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror("Erro", str(e)))
+                error_msg = str(e)
+                self.after(0, lambda msg=error_msg: messagebox.showerror("Erro", msg))
         
         threading.Thread(target=do_process, daemon=True).start()
     
@@ -608,7 +612,8 @@ class DesktopClient(tk.Tk):
                 )
                 self.after(0, lambda: self._on_all_processed(result))
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror("Erro", str(e)))
+                error_msg = str(e)
+                self.after(0, lambda msg=error_msg: messagebox.showerror("Erro", msg))
         
         threading.Thread(target=do_process, daemon=True).start()
     
@@ -647,9 +652,10 @@ class DesktopClient(tk.Tk):
                 with open(filename, "w", encoding="utf-8") as f:
                     f.write(content)
                 
-                self.after(0, lambda: self._update_status(f"Exportado: {filename}"))
+                self.after(0, lambda fn=filename: self._update_status(f"Exportado: {fn}"))
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror("Erro", str(e)))
+                error_msg = str(e)
+                self.after(0, lambda msg=error_msg: messagebox.showerror("Erro", msg))
         
         threading.Thread(target=do_export, daemon=True).start()
     

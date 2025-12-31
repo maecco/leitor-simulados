@@ -235,6 +235,8 @@ async def process_image(
             "report": result["report"].to_dict() if result["report"] else None
         }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
