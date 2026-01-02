@@ -52,9 +52,8 @@ class SessionManager:
                 test_type=test_type,
                 created_at=datetime.now()
             )
-        
-        # Cleanup old sessions
-        self._cleanup_expired_sessions()
+            # Cleanup old sessions (inside lock)
+            self._cleanup_expired_sessions()
         
         return session_id
     
@@ -110,6 +109,15 @@ class SessionManager:
             if not session:
                 return None
             return session.images.get(image_id)
+    
+    def delete_image(self, session_id: str, image_id: str) -> bool:
+        """Delete an image from a session"""
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if not session or image_id not in session.images:
+                return False
+            del session.images[image_id]
+            return True
     
     def update_image_results(
         self,

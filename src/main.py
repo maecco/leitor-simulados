@@ -113,6 +113,20 @@ def create_app() -> FastAPI:
         """Health check endpoint"""
         return {"status": "healthy"}
     
+    @app.get("/api/status", tags=["status"])
+    async def get_system_status():
+        """
+        Get comprehensive system status.
+        
+        Returns server status, hardware information (GPU/CPU), and details
+        about all available models including what device they will run on.
+        
+        YOLO models will run on GPU (CUDA) if available, otherwise CPU.
+        EFScanAlgo models always run on CPU.
+        """
+        processing_service = get_processing_service()
+        return processing_service.get_system_status()
+    
     return app
 
 

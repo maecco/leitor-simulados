@@ -8,7 +8,6 @@ class Stage(Enum):
 
 class ModelType(Enum):
     YOLOV8 = 'YOLOV8'
-    LEGACY = 'LEGACY'
     EFSCANALGO = 'EFSCANALGO'
 
 class TestType(Enum):

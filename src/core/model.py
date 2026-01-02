@@ -4,7 +4,6 @@ from enum import Enum
 from pathlib import Path
 
 import numpy as np
-import tflite_runtime.interpreter as tflite
 from ultralytics import YOLO
 
 from core.definitions.enums import ModelType, TestType, Stage
@@ -19,8 +18,6 @@ from core.detection.label_map import (
     DEFAULT_SECOND_STAGE_LABEL_MAP
 )
 
-from utils.misc import normalize_image
-
 
 
 # SECTION: Model enum and base class
@@ -32,10 +29,17 @@ class DetectionModel(ABC):
         cls,
         rel_path : str,
         stage : Stage = Stage.NULL,
-        test : TestType = TestType.NULL
+        test : TestType = TestType.NULL,
+        device : str = "auto"
         ) -> DetectionModel:
         """
         Load the model from the models path
+        
+        Args:
+            rel_path: Relative path to model file
+            stage: Processing stage (FIRST, SECOND, BOTH)
+            test: Test type for EFScanAlgo models
+            device: Device for YOLO models ("auto", "cpu", "cuda", etc.)
         """
 
         # Get the model label map
@@ -59,23 +63,14 @@ class DetectionModel(ABC):
         # Get the type of the model and load accordingly
         model_suffix = model_name.split('.')[-1]
         
-        # Legacy model
-        if model_suffix == 'tflite':
-            interpreter = tflite.Interpreter(
-                str(model_path.resolve())
-            )
-            return LegacyModel(interpreter, label_map)
-        
         # EFScanAlgo model
-        elif model_suffix == 'py':
+        if model_suffix == 'py':
             return EFScanAlgoModel(model_name, stage, test, label_map)
         
         # YOLOV8 model
         elif model_suffix == 'pt':
-            engine = YOLO(
-                model_path
-            )
-            return YOLOModel(engine, label_map)
+            engine = YOLO(model_path)
+            return YOLOModel(engine, label_map, device=device)
 
 
     def __init__(
@@ -102,12 +97,32 @@ class DetectionModel(ABC):
 
 
 class YOLOModel(DetectionModel):
-    def __init__(self, engine : YOLO, label_map : LabelMap):
+    def __init__(self, engine : YOLO, label_map : LabelMap, device: str = "auto"):
         super().__init__(ModelType.YOLOV8, label_map=label_map)
         self.engine = engine
+        self.device = self._resolve_device(device)
+    
+    def _resolve_device(self, device: str) -> str:
+        """Resolve the device to use for inference"""
+        if device == "auto":
+            import torch
+            return "cuda" if torch.cuda.is_available() else "cpu"
+        return device
+    
+    def get_device_info(self) -> dict:
+        """Get information about the device being used"""
+        import torch
+        info = {
+            "device": self.device,
+            "cuda_available": torch.cuda.is_available(),
+        }
+        if torch.cuda.is_available():
+            info["cuda_device_count"] = torch.cuda.device_count()
+            info["cuda_device_name"] = torch.cuda.get_device_name(0) if torch.cuda.device_count() > 0 else None
+        return info
 
     def detect(self, img : CoreImage) -> list[Detection]:
-        result = self.engine.predict(img.raw, verbose=False)[0]
+        result = self.engine.predict(img.raw, verbose=False, device=self.device)[0]
         detections = []
         boxes = result.boxes.xyxyn.tolist()
         classes = result.boxes.cls.tolist()
@@ -124,66 +139,6 @@ class YOLOModel(DetectionModel):
                 )
             )
         return detections
-
-
-
-# SECTION: LEGACY MODEL
-
-
-class LegacyModel(DetectionModel):
-    def __init__(self, interpreter, label_map : LabelMap):
-        super().__init__(ModelType.LEGACY, label_map=label_map)
-        self.interpreter = interpreter
-        self.interpreter.allocate_tensors()
-        input_details = self.interpreter.get_input_details()[0]["shape"]
-        self.input_height = input_details[1]
-        self.input_width = input_details[2]
-
-
-    def detect(self, img : CoreImage) -> list[Detection]:
-        normalized_img = normalize_image(
-            img.raw, self.input_height, self.input_width
-        )
-        detections = self.__detect_objects(self.interpreter, normalized_img, img.raw)
-
-        return detections
-
-    # AUX FUNCTIONS
-
-    def __detect_objects(self, interpreter, normalized_image, raw_image):
-        self.__set_input_tensor(interpreter, normalized_image)
-        interpreter.invoke()
-
-        scores = self.__get_output_tensor(interpreter, 0)
-        boxes = self.__get_output_tensor(interpreter, 1)
-        count = int(self.__get_output_tensor(interpreter, 2))
-        classes = self.__get_output_tensor(interpreter, 3)
-
-
-        detections = []
-        for i in range(count):
-            ymin, xmin, ymax, xmax = boxes[i].tolist()
-            box = FloatBoundingBox.from_floats(xmin, ymin, xmax, ymax)
-            detections.append(
-                Detection(
-                    box,
-                    int(classes[i]),
-                    scores[i],
-                    raw_image.shape[1],
-                    raw_image.shape[0],
-                )
-            )
-        return detections
-
-    def __set_input_tensor(self, interpreter, image):
-        tensor_index = interpreter.get_input_details()[0]["index"]
-        input_tensor = interpreter.tensor(tensor_index)()[0]
-        input_tensor[:, :] = image
-
-    def __get_output_tensor(self, interpreter, index):
-        output_details = interpreter.get_output_details()[index]
-        tensor = np.squeeze(interpreter.get_tensor(output_details["index"]))
-        return tensor
 
 
 

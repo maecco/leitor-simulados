@@ -72,10 +72,13 @@ class ProcessingService:
                 name, extension = parts[-1].split('.')
                 
                 model_type = (
-                    "LEGACY" if extension == 'tflite'
-                    else "EFSCANALGO" if extension == 'py'
-                    else "YOLOV8"
+                    "EFSCANALGO" if extension == 'py'
+                    else "YOLOV8" if extension == 'pt'
+                    else None
                 )
+                
+                if model_type is None:
+                    continue  # Skip unsupported model types
                 
                 target_stage = (
                     "FIRST" if 'first_stage' in path
@@ -104,6 +107,55 @@ class ProcessingService:
             m for m in self._available_models
             if m["target_stage"] == stage or m["target_stage"] == "BOTH"
         ]
+    
+    def get_system_status(self) -> Dict[str, Any]:
+        """
+        Get comprehensive system status including hardware info and available models.
+        
+        Returns:
+            Dict containing server status, hardware info, and model details
+        """
+        import torch
+        import multiprocessing
+        
+        # Hardware info
+        hardware_info = {
+            "cuda_available": torch.cuda.is_available(),
+            "cuda_device_count": torch.cuda.device_count() if torch.cuda.is_available() else 0,
+            "cuda_device_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() and torch.cuda.device_count() > 0 else None,
+            "cpu_cores": multiprocessing.cpu_count(),
+        }
+        
+        # Model info with device details
+        models_info = {}
+        for model in self._available_models:
+            model_key = f"{model['name']}_{model['target_stage']}"
+            
+            if model["model_type"] == "YOLOV8":
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+                description = "YOLOv8 neural network model for object detection"
+            elif model["model_type"] == "EFSCANALGO":
+                device = "cpu"
+                description = "EFScanAlgo algorithmic processing (no neural network)"
+            else:
+                device = "unknown"
+                description = "Unknown model type"
+            
+            models_info[model_key] = {
+                "name": model["name"],
+                "type": model["model_type"],
+                "stage": model["target_stage"],
+                "running_on": device,
+                "description": description,
+                "path": model["rel_path"]
+            }
+        
+        return {
+            "server_status": "online",
+            "hardware": hardware_info,
+            "available_models": models_info,
+            "models_count": len(self._available_models)
+        }
     
     def process_image(
         self,

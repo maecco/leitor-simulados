@@ -98,8 +98,7 @@ async def delete_image(
     session_manager: SessionManagerDep
 ) -> Dict[str, str]:
     """Delete an image from a session"""
-    if image_id in session.images:
-        del session.images[image_id]
+    if session_manager.delete_image(session_id, image_id):
         logger.info(f"Deleted image {image_id} from session {session_id}")
         return {"status": "deleted"}
     

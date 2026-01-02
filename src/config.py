@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     # Session
     session_timeout_hours: int = 24
     
+    # Hardware
+    yolo_device: str = "auto"  # "auto", "cpu", "cuda", "cuda:0", etc.
+    
     # Paths
     project_root: Path = Path(__file__).parent.parent
     

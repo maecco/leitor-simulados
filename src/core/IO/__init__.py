@@ -4,7 +4,7 @@ from enum import Enum
 
 # CoreImages
 ACCEPTED_IMAGE_EXTENTIONS = {'.png', '.jpg', '.jpeg'}
-ACCEPTED_MODELS_EXTENTIONS = {'.tflite', '.py', '.pt'}
+ACCEPTED_MODELS_EXTENTIONS = {'.py', '.pt'}
 # Paths - Updated for src structure
 ROOT_PATH = Path(__file__).parent.parent.parent.parent  # Project root
 MODELS_PATH = ROOT_PATH / 'models'

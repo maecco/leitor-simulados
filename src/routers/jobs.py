@@ -15,6 +15,26 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
 
+@router.get("/", response_model=Dict[str, Any])
+async def get_job_stats(
+    job_manager: JobManagerDep
+) -> Dict[str, Any]:
+    """Get job manager statistics"""
+    return job_manager.get_stats()
+
+
+@router.get("/session/{session_id}", response_model=Dict[str, List[Dict[str, Any]]])
+async def get_session_jobs(
+    session_id: str,
+    job_manager: JobManagerDep
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Get all jobs for a session"""
+    jobs = job_manager.get_jobs_for_session(session_id)
+    return {
+        "jobs": [job.to_dict() for job in jobs]
+    }
+
+
 @router.get("/{job_id}", response_model=Dict[str, Any])
 async def get_job_status(
     job_id: str,
@@ -136,23 +156,3 @@ async def delete_job(
         "status": "deleted",
         "job_id": job_id
     }
-
-
-@router.get("/session/{session_id}", response_model=Dict[str, List[Dict[str, Any]]])
-async def get_session_jobs(
-    session_id: str,
-    job_manager: JobManagerDep
-) -> Dict[str, List[Dict[str, Any]]]:
-    """Get all jobs for a session"""
-    jobs = job_manager.get_jobs_for_session(session_id)
-    return {
-        "jobs": [job.to_dict() for job in jobs]
-    }
-
-
-@router.get("/", response_model=Dict[str, Any])
-async def get_job_stats(
-    job_manager: JobManagerDep
-) -> Dict[str, Any]:
-    """Get job manager statistics"""
-    return job_manager.get_stats()
