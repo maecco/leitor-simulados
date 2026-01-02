@@ -15,12 +15,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import get_settings
-from dependencies import get_processing_service, get_session_manager
+from dependencies import get_processing_service, get_session_manager, get_job_manager
 from routers import (
     sessions_router,
     images_router,
     processing_router,
-    reports_router
+    reports_router,
+    jobs_router
 )
 
 
@@ -47,10 +48,19 @@ async def lifespan(app: FastAPI):
     processing_service = get_processing_service()
     logger.info(f"✅ Loaded {len(processing_service.get_available_models())} models")
     
+    # Initialize job manager
+    job_manager = get_job_manager()
+    logger.info("✅ JobManager initialized")
+    
     yield
     
     # Shutdown
     logger.info("🛑 Shutting down...")
+    
+    # Shutdown job manager (stops background threads)
+    job_manager = get_job_manager()
+    job_manager.shutdown()
+    
     session_manager = get_session_manager()
     session_manager.cleanup_all()
     logger.info("✅ Cleanup complete")
@@ -85,7 +95,8 @@ def create_app() -> FastAPI:
     app.include_router(images_router)
     app.include_router(processing_router)
     app.include_router(reports_router)
-    
+    app.include_router(jobs_router)
+
     # Root endpoints
     @app.get("/", tags=["root"])
     async def root():

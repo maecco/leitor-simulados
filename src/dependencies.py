@@ -9,6 +9,7 @@ from fastapi import Depends, HTTPException, status
 
 from services.session_manager import SessionManager, Session
 from services.processing import ProcessingService
+from services.job_manager import JobManager
 from config import Settings, get_settings
 
 
@@ -30,9 +31,17 @@ def get_processing_service() -> ProcessingService:
     return service
 
 
+@lru_cache()
+def get_job_manager() -> JobManager:
+    """Get singleton JobManager instance"""
+    # Set use_parallel=True for parallel image processing (higher memory)
+    return JobManager(use_parallel=False)
+
+
 # Type aliases for cleaner dependency injection
 SessionManagerDep = Annotated[SessionManager, Depends(get_session_manager)]
 ProcessingServiceDep = Annotated[ProcessingService, Depends(get_processing_service)]
+JobManagerDep = Annotated[JobManager, Depends(get_job_manager)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
 
