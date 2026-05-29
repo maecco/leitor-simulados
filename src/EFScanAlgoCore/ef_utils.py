@@ -107,9 +107,9 @@ def ef_avg_lines(lines : list[Line], axis : Axis, img : CoreImage) -> Line:
     avg = [int(x/len(lines)) for x in avg]
     # Put the lines in the right order depending on the axis
     if axis == Axis.HORIZONTAL:
-        return Line([0, avg[0], lenght, avg[1]])
+        return Line.from_list([0, avg[0], lenght, avg[1]])
     else:
-        return Line([avg[0], 0, avg[1], lenght])
+        return Line.from_list([avg[0], 0, avg[1], lenght])
 
 def ef_get_tilt(img, draw=False):
     '''Receves an Eintein Floripa test image and returns the tilt of the image.'''

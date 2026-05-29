@@ -21,39 +21,44 @@ class Axis(Enum):
             return Axis.HORIZONTAL if self == Axis.VERTICAL else Axis.VERTICAL
 
 
-class Line():
-    def __init__(self, init_as = [0, 0, 0, 0]):
-        self.x1 = init_as[0]
-        self.y1 = init_as[1]
-        self.x2 = init_as[2]
-        self.y2 = init_as[3]
-    
-    def __getitem__(self, index):
-        if index == 0:
-            return self.x1
-        elif index == 1:
-            return self.y1
-        elif index == 2:
-            return self.x2
-        elif index == 3:
-            return self.y2
-        else:
-            raise IndexError("Index out of range")
+@dataclass
+class Line:
+    """Represents a line segment with two endpoints (x1, y1) and (x2, y2)."""
+    x1: int = 0
+    y1: int = 0
+    x2: int = 0
+    y2: int = 0
 
-    def __setitem__(self, index, value):
-        if index == 0:
-            self.x1 = value
-        elif index == 1:
-            self.y1 = value
-        elif index == 2:
-            self.x2 = value
-        elif index == 3:
-            self.y2 = value
-        else:
-            raise IndexError("Index out of range")    
+    @classmethod
+    def from_list(cls, coords: list[int]) -> Line:
+        """Create a Line from a list of coordinates [x1, y1, x2, y2]."""
+        if len(coords) != 4:
+            raise ValueError("Expected 4 coordinates [x1, y1, x2, y2]")
+        return cls(coords[0], coords[1], coords[2], coords[3])
+
+    def __post_init__(self):
+        # Support legacy initialization with list
+        pass
+
+    def __getitem__(self, index: int) -> int:
+        if index == 0:   return self.x1
+        elif index == 1: return self.y1
+        elif index == 2: return self.x2
+        elif index == 3: return self.y2
+        else: raise IndexError("Index out of range")
+
+    def __setitem__(self, index: int, value: int) -> None:
+        if index == 0:   self.x1 = value
+        elif index == 1: self.y1 = value
+        elif index == 2: self.x2 = value
+        elif index == 3: self.y2 = value
+        else: raise IndexError("Index out of range")
+
+    def __iter__(self):
+        return iter((self.x1, self.y1, self.x2, self.y2))
 
     def __repr__(self):
-        return f"({self.x1}-{self.y1})({self.x2}-{self.y2})"
+        return f"Line({self.x1}, {self.y1}, {self.x2}, {self.y2})"
 
 
 
